@@ -1508,8 +1508,5 @@ export const ACCOUNT_FACTORY_ABI =[
 
 // Contract addresses - replace with your deployed addresses
 export const CONTRACT_ADDRESSES = {
-  ACCOUNT_FACTORY: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as `0x${string}`,
-  // Simple account addresses will be dynamic based on user
+  ACCOUNT_FACTORY: "0x5D16F29E70e90ac48C7F4fb2c1145911a774eFbF" as `0x${string}`,
 };
-//0x5FbDB2315678afecb367f032d93F642f64180aa3
-//"0x6A0C73162c20Bc56212D643112c339f654C45198"
