@@ -25,9 +25,7 @@ export default function Home() {
                             CUSTOM HOOKS
 //////////////////////////////////////////////////////////////*/
   const {
-    smartAccount,
-    taskManager,
-    factoryOwner,
+    smartAccountAddress,
     deploymentState,
     createAccount,
     debug,
@@ -55,10 +53,10 @@ export default function Home() {
     }
   };
   useEffect(() => {
-    if (authenticated && smartAccount && taskManager) {
+    if (authenticated && smartAccountAddress) {
         router.push("/dashboard");
     }
-  }, [authenticated, smartAccount, taskManager]);
+  }, [authenticated, smartAccountAddress]);
 
 
   /*//////////////////////////////////////////////////////////////
@@ -83,16 +81,12 @@ export default function Home() {
 { !authenticated?<LoginForm />:   <div className='bg-background min-h-screen flex flex-col items-center justify-center  relative'>
       {debug && (
         <div className='absolute top-4 left-4 bg-tag-expired rounded p-6'>
-          <div className=''>
-            Factory Owner: {factoryOwner ? factoryOwner : "not available"}
-          </div>
+
           <div className=''>
             SImple Account Address:{" "}
-            {smartAccount ? smartAccount : "not available"}
+            {smartAccountAddress ? smartAccountAddress : "not available"}
           </div>
-          <div className=''>
-            TaskManagerAddress: {taskManager ? taskManager : "not available"}
-          </div>
+
         </div>
       )}
       <button
