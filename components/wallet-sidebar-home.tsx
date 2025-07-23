@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useEffect } from 'react';
 import { activeTabType } from '@/app/types/types';
 import { useDashboard } from '@/app/hooks/useDashboard';

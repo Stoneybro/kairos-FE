@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useEffect } from 'react';
 import {QRCodeCanvas} from "qrcode.react"
 import { Copy } from 'lucide-react';

@@ -1,9 +1,9 @@
+"use client"
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import Image from "next/image";
 import logo from "../public/logo.svg";
-import { CustomConnectButton } from "@/app/components/ui/ConnectButton";
 import { IoWalletOutline } from "react-icons/io5";
 
 export function SiteHeader() {

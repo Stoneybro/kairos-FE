@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+"use client"
 import { Button } from "@/components/ui/button";
 import { usePrivy, useLogin } from "@privy-io/react-auth";
 import { Loader2, Mail, Wallet } from "lucide-react";
@@ -16,7 +16,7 @@ export function LoginForm({
     return <div className="flex justify-center items-center"><Loader2 className="animate-spin h-10 w-10" /></div>
   }
   return (
-    <div className={cn("flex flex-col gap-6")} {...props}>
+    <div className="flex flex-col gap-6" {...props}>
       <div className='flex flex-col items-center gap-2 text-center'>
         <h1 className='text-2xl font-bold'>Login to your account</h1>
         <p className='text-muted-foreground text-sm text-balance'>

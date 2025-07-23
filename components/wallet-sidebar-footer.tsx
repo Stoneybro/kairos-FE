@@ -1,3 +1,4 @@
+"use client"
 import { RiHome6Fill } from "react-icons/ri";
 import { AiFillClockCircle } from "react-icons/ai";
 import { IoSettings } from "react-icons/io5";

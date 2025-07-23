@@ -1,7 +1,7 @@
+"use client"
 import { Loader2, LogOut } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
-import { useWallets } from '@privy-io/react-auth';
+import { usePrivy,useWallets } from '@privy-io/react-auth';
 import { anvil,baseSepolia } from 'viem/chains';
 import { ThemeToggle } from './theme-switcher';
 import { useRouter } from 'next/navigation';
@@ -34,9 +34,7 @@ const WalletSidebarSettings= () => {
   const setAccountAddress = useAddressStore(
     (state) => state.setSmartAccountAddress
   );
-  const setTaskManagerAddress = useAddressStore(
-    (state) => state.setTaskManagerAddress
-  );
+
   
 
   /*//////////////////////////////////////////////////////////////*/
@@ -61,7 +59,6 @@ const wallet=wallets[0];
     localStorage.removeItem("address-storage");
   useAddressStore.setState({
     SmartAccountAddress: null,
-    TaskManagerAddress: null,
   });
   logout()
 

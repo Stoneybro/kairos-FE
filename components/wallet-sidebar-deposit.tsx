@@ -1,3 +1,4 @@
+"use client"
 import { useDashboard } from "@/app/hooks/useDashboard";
 import { useAddressStore } from "@/app/lib/store/addressStore";
 import { useDataStore } from "@/app/lib/store/dataStore";

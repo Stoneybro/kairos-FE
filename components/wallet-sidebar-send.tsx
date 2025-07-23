@@ -1,3 +1,4 @@
+"use client"
 import { useDashboard } from '@/app/hooks/useDashboard';
 import { SMART_ACCOUNT_ABI } from '@/app/lib/contracts';
 import { useAddressStore } from '@/app/lib/store/addressStore';

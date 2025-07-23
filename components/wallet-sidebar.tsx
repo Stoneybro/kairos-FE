@@ -1,3 +1,4 @@
+"use client"
 import { Sidebar } from "@/components/ui/sidebar"
 import { SidebarHeader } from "./wallet-sidebar-header"
 import { SidebarFooter } from "./wallet-sidebar-footer"
