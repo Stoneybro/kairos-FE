@@ -2,6 +2,9 @@
   "name": "kairos2.0",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "ox": "0.8.1"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

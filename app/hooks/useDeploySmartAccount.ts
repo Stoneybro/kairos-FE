@@ -59,6 +59,7 @@ export function useDeploySmartAccount() {
 
     try {
       const hash = await smartAccountClient.sendUserOperation({
+        account: smartAccountClient.account,
         calls: [
           {
             to: smartAccountAddress,
@@ -120,14 +121,12 @@ export function useDeploySmartAccount() {
       } catch (err:any) {
         console.error("Error fetching contract code:", err.message);
       } finally {
-        setDeploymentState((prev) => ({
-          ...prev,
-        }));
+        setIsAccountDeployedLoading(false);
       }
       setAccountAddress(smartAccountAddress as `0x${string}`);
     };
     check();
-  }, [smartAccountClient, smartAccountAddress, isLoading]);
+  }, [smartAccountClient, smartAccountAddress]);
 
 
   /*************************************************************************/
