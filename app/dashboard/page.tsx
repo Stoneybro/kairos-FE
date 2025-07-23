@@ -1,19 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
-import SideWallet from "../components/sideWallet/SideWallet";
-import TaskCard from "../components/TaskCard";
-import Image from "next/image";
-import { Loader2, X } from "lucide-react";
-import coin from "../../public/coin.svg";
-import target from "../../public/target.svg";
-import lock from "../../public/lock.svg"
-import { formatEther} from "viem";
 import { useDashboard } from "../hooks/useDashboard";
-import { PenaltyType } from "../types/types";
 import { useEffect } from "react";
-import { useAccount } from "wagmi";
 import { WalletSidebar } from "@/components/wallet-sidebar"
-import TaskCreation from "@/components/section-createtasks";
 import { useAddressStore } from "../lib/store/addressStore";
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"

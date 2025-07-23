@@ -137,6 +137,11 @@ const deadlineInSeconds = deadline ? Math.floor(deadline.getTime() / 1000) : und
       return "Deadline must be in the future";
     }
 
+    if (penaltyType === PenaltyType.UNDEFINED) {
+      return "Please select a penalty type";
+    }
+
+
     if (penaltyType === PenaltyType.SEND_BUDDY && !buddyAddress.trim()) {
       return "Please enter a buddy address";
     }

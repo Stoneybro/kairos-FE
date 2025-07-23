@@ -3,23 +3,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAddressStore } from "../lib/store/addressStore";
 import { useUiStore } from "../lib/store/UIStore";
-import {
-  useAccount,
-  useBalance,
-  useBlockNumber,
-  useReadContract,
-  useTransactionReceipt,
-  useWriteContract,
-} from "wagmi";
+import { useAccount, useBalance, useReadContract } from "wagmi";
 import { SMART_ACCOUNT_ABI } from "../lib/contracts";
-import {formatUnits, parseEther } from "viem";
-
-import {toast} from "sonner";
+import { encodeFunctionData, formatUnits, parseEther } from "viem";
+import { useShallow } from "zustand/react/shallow";
+import { toast } from "sonner";
 import { useDataStore } from "../lib/store/dataStore";
 import { useDashboardHelper } from "./useDashboardHelper";
 import { TaskType } from "../types/types";
 import { PenaltyType } from "../types/types";
-
+import { useSmartAccount } from "../lib/useSmartAccount";
 
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
@@ -61,44 +54,18 @@ export function useDashboard() {
   const smartAccountAddress = useAddressStore(
     (state) => state.SmartAccountAddress
   );
-  const TaskManagerAddress = useAddressStore(
-    (state) => state.TaskManagerAddress
-  );
-
-  const setaccountBalanceRefetch = useDataStore(
-    (state) => state.setRefetchAccountbalance
-  );
-  const setCommitedFundsRefetch = useDataStore(
-    (state) => state.setRefetchCommittedFunds
+  const { setRefetchAccountbalance, setRefetchCommittedFunds } = useDataStore(
+    useShallow((state) => ({
+      setRefetchAccountbalance: state.setRefetchAccountbalance,
+      setRefetchCommittedFunds: state.setRefetchCommittedFunds,
+    }))
   );
   const isSideBarOpen = useUiStore((state) => state.isSideWalletOpen);
   /*************************************************************************/
   /** 🪝 WAGMI / OTHER HOOKS **********************************************/
   /*************************************************************************/
-  const { data: createTaskHash, writeContract: useWriteCreateTask } =
-    useWriteContract();
-  const { isSuccess: isCreateTaskSuccess } = useTransactionReceipt({
-    hash: createTaskHash,
-  });
-  const { data: completeTaskHash, writeContract: useWriteCompleteTask } =
-    useWriteContract();
-  const { isSuccess: isCompleteTaskSuccess, isError: isCompleteTaskError } =
-    useTransactionReceipt({
-      hash: completeTaskHash,
-    });
-  const { data: cancelTaskHash, writeContract: useWriteCancelTask } =
-    useWriteContract();
-  const { data: releasePaymentHash, writeContract: useWritereleasePayment } =
-    useWriteContract();
-  const { isSuccess: isReleasePaymentSuccess, isError: isReleasePaymentError } =
-    useTransactionReceipt({ hash: releasePaymentHash });
-  const { isSuccess: isCancelTaskSuccess, isError: isCancelTaskError } =
-    useTransactionReceipt({
-      hash: cancelTaskHash,
-    });
-  const { data: blockNumber } = useBlockNumber({
-    watch: true,
-  });
+  const { smartAccountClient } = useSmartAccount();
+
   const { address } = useAccount();
   const {
     data: pWalletBalance,
@@ -146,7 +113,6 @@ export function useDashboard() {
     },
   });
 
-
   /*************************************************************************/
   /** 📡 HELPERS *****************************************************/
   /*************************************************************************/
@@ -188,8 +154,14 @@ export function useDashboard() {
   /*************************************************************************/
   //fix the addressstore problem
   // In useDashboard.js, fix the createTask function:
-
-  console.log("tasks", tasks);
+  const resetTaskForm = () => {
+    setTaskDescription("");
+    setRewardAmount("");
+    setDeadline(undefined);
+    setDelayDuration("");
+    setBuddyAddress("");
+    setPenaltyType(PenaltyType.UNDEFINED);
+  };
 
   async function createTask() {
     const formValidity = validateTaskForm();
@@ -198,24 +170,25 @@ export function useDashboard() {
       toast.error(formValidity);
       return;
     }
+    if (!smartAccountClient?.account || !smartAccountAddress) {
+      toast.error("Smart account not ready.");
+      return;
+    }
+
     setCreateTaskButton("Creating Task");
 
-    // Calculate deadline duration in seconds from now
-    const deadlineInSeconds = deadline
-      ? BigInt(
-          Math.floor(deadline.getTime() / 1000) - Math.floor(Date.now() / 1000)
-        )
-      : BigInt(0);
-
     try {
-      await useWriteCreateTask({
-        address: smartAccountAddress as `0x${string}`,
+      const deadlineInSeconds = deadline
+        ? BigInt(Math.floor(deadline.getTime() / 1000))
+        : BigInt(0);
+
+      const callData = encodeFunctionData({
         abi: SMART_ACCOUNT_ABI,
         functionName: "createTask",
         args: [
           taskDescription,
           parseEther(rewardAmount),
-          deadlineInSeconds, // This should be duration, not absolute timestamp
+          deadlineInSeconds,
           penaltyType === PenaltyType.DELAY_PAYMENT ? 1 : 2,
           penaltyType === PenaltyType.SEND_BUDDY
             ? (buddyAddress as `0x${string}`)
@@ -225,8 +198,30 @@ export function useDashboard() {
             : BigInt(0),
         ],
       });
+
+      const hash = await smartAccountClient.sendUserOperation({
+        account: smartAccountClient.account,
+        calls: [
+          {
+            to: smartAccountAddress,
+            data: callData,
+            value: parseEther(rewardAmount),
+          },
+        ],
+      });
+
+      await smartAccountClient.waitForUserOperationReceipt({ hash });
+
+      toast.success("Task created successfully!");
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      resetTaskForm();
+      setShowCreateTask(false);
     } catch (error) {
-      console.log(error);
+      console.error("Failed to create task:", error);
+      toast.error("Failed to create task. Please try again.");
+    } finally {
       setCreateTaskButton("Create Task");
     }
   }
@@ -236,22 +231,34 @@ export function useDashboard() {
       console.log("no tasks available");
       return;
     }
+    if (!smartAccountClient?.account || !smartAccountAddress) {
+      toast.error("Smart account not ready.");
+      return;
+    }
 
     const taskId = id.toString();
-
-    // Add task to completing set
     setCompletingTasks((prev) => new Set([...prev, taskId]));
 
     try {
-      await useWriteCompleteTask({
-        address: smartAccountAddress as `0x${string}`,
+      const callData = encodeFunctionData({
         abi: SMART_ACCOUNT_ABI,
         functionName: "completeTask",
         args: [id],
       });
+      const hash = await smartAccountClient.sendUserOperation({
+        account: smartAccountClient.account,
+        calls: [{ to: smartAccountAddress, data: callData, value: 0n }],
+      });
+      await smartAccountClient.waitForUserOperationReceipt({ hash });
+
+      toast.success("Task completed successfully!");
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
     } catch (error) {
-      console.log(error);
-      // Remove from completing set on error
+      console.error("Failed to complete task:", error);
+      toast.error("Failed to complete task. Please try again.");
+    } finally {
       setCompletingTasks((prev) => {
         const newSet = new Set(prev);
         newSet.delete(taskId);
@@ -265,22 +272,34 @@ export function useDashboard() {
       console.log("no tasks available");
       return;
     }
+    if (!smartAccountClient?.account || !smartAccountAddress) {
+      toast.error("Smart account not ready.");
+      return;
+    }
 
     const taskId = id.toString();
-
-    // Add task to canceling set
     setCancelingTasks((prev) => new Set([...prev, taskId]));
 
     try {
-      await useWriteCancelTask({
-        address: smartAccountAddress as `0x${string}`,
+      const callData = encodeFunctionData({
         abi: SMART_ACCOUNT_ABI,
         functionName: "cancelTask",
         args: [id],
       });
+      const hash = await smartAccountClient.sendUserOperation({
+        account: smartAccountClient.account,
+        calls: [{ to: smartAccountAddress, data: callData, value: 0n }],
+      });
+      await smartAccountClient.waitForUserOperationReceipt({ hash });
+
+      toast.success("Task canceled successfully!");
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
     } catch (error) {
-      console.log(error);
-      // Remove from canceling set on error
+      console.error("Failed to cancel task:", error);
+      toast.error("Failed to cancel task. Please try again.");
+    } finally {
       setCancelingTasks((prev) => {
         const newSet = new Set(prev);
         newSet.delete(taskId);
@@ -293,17 +312,38 @@ export function useDashboard() {
       console.log("no tasks available");
       return;
     }
-    setReleasingPayment((prev) => new Set([...prev, id.toString()]));
+    if (!smartAccountClient?.account || !smartAccountAddress) {
+      toast.error("Smart account not ready.");
+      return;
+    }
+
+    const taskId = id.toString();
+    setReleasingPayment((prev) => new Set([...prev, taskId]));
+
     try {
-      await useWritereleasePayment({
-        address: smartAccountAddress as `0x${string}`,
+      const callData = encodeFunctionData({
         abi: SMART_ACCOUNT_ABI,
         functionName: "releaseDelayedPayment",
         args: [id],
       });
+      const hash = await smartAccountClient.sendUserOperation({
+        account: smartAccountClient.account,
+        calls: [{ to: smartAccountAddress, data: callData, value: 0n }],
+      });
+      await smartAccountClient.waitForUserOperationReceipt({ hash });
+      toast.success("Payment released successfully!");
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
     } catch (error) {
-      console.log(error);
+      console.error("Failed to release payment:", error);
       toast.error("Failed to release payment. Please try again.");
+    } finally {
+      setReleasingPayment((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
     }
   }
   // Helper functions to check if a specific task is being operated on
@@ -322,82 +362,8 @@ export function useDashboard() {
   /** 📡 SIDE EFFECTS *****************************************************/
   /*************************************************************************/
   useEffect(() => {
-    taskRefetch();
-  }, [isCreateTaskSuccess, isCompleteTaskSuccess, isCancelTaskSuccess]);
-
-  useEffect(() => {
-    if (createTaskButton === "Task Created") {
-      setCreateTaskButton("Create Task");
-      setLocalSuccess(false);
-    }
-  }, [taskDescription, rewardAmount, deadline, delayDuration, buddyAddress]);
-
-  useEffect(() => {
-    if (isCreateTaskSuccess) {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setLocalSuccess(true);
-    }
-  }, [blockNumber]);
-
-  // Handle complete task success
-  useEffect(() => {
-    if (isCompleteTaskSuccess) {
-      // Clear all completing tasks since we don't know which specific task completed
-      setCompletingTasks(new Set());
-      toast.success("Task completed successfully!");
-
-      // Refetch data
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-    }
-  }, [isCompleteTaskSuccess]);
-
-  // Handle complete task error
-  useEffect(() => {
-    if (isCompleteTaskError) {
-      // Clear all completing tasks on error
-      setCompletingTasks(new Set());
-      toast.error("Failed to complete task. Please try again.");
-    }
-  }, [isCompleteTaskError]);
-
-  // Handle cancel task success
-  useEffect(() => {
-    if (isCancelTaskSuccess) {
-      // Clear all canceling tasks since we don't know which specific task was canceled
-      setCancelingTasks(new Set());
-      toast.success("Task canceled successfully!");
-
-      // Refetch data
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-    }
-  }, [isCancelTaskSuccess]);
-
-  // Handle cancel task error
-  useEffect(() => {
-    if (isCancelTaskError) {
-      // Clear all canceling tasks on error
-      setCancelingTasks(new Set());
-      toast.error("Failed to cancel task. Please try again.");
-    }
-  }, [isCancelTaskError]);
-  useEffect(() => {
-    if (isReleasePaymentSuccess) {
-      setReleasingPayment(new Set());
-      toast.success("Payment released successfully!");
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-    }
-  }, [isReleasePaymentSuccess]);
-  useEffect(() => {
-    setaccountBalanceRefetch(balanceRefetch);
-    setCommitedFundsRefetch(commitedFundsrefetch);
+    setRefetchAccountbalance(balanceRefetch);
+    setRefetchCommittedFunds(commitedFundsrefetch);
   }, [_accountBalance, _commitedFunds]);
 
   /*************************************************************************/
@@ -441,15 +407,12 @@ export function useDashboard() {
     completeTask,
     cancelTask,
     releasePayment,
-    TaskManagerAddress,
     smartAccountAddress,
     isSideBarOpen,
     copyToClipboard,
     truncateAddress,
     formattedPersonalBalance,
     localSuccess,
-    isCompleteTaskSuccess,
-    isCancelTaskSuccess,
     isTaskCompleting,
     isTaskCanceling,
     releasePaymentInProgress,

@@ -1,22 +1,13 @@
 "use client";
-import {
-  useWriteContract,
-  useAccount,
-  useTransactionReceipt,
-  useReadContract,
-} from "wagmi";
-import {
-  SMART_ACCOUNT_ABI,
-  ACCOUNT_FACTORY_ABI,
-  CONTRACT_ADDRESSES,
-} from "../lib/contracts";
+import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useAddressStore } from "../lib/store/addressStore";
 import { DeploymentState } from "../types/types";
 import { toast } from "sonner";
-import { log } from "console";
+import { useSmartAccount } from "../lib/useSmartAccount";
+import { publicClient } from "../lib/pimlico";
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
 /*************************************************************************/
@@ -29,65 +20,18 @@ export function useDeploySmartAccount() {
     accountStep: "idle",
     accountError: undefined,
   });
+  const [isAccountDeployedLoading, setIsAccountDeployedLoading] = useState(false)
   const [debug, setDebug] = useState(false);
   /*************************************************************************/
   /** 🪝 WAGMI / OTHER HOOKS **********************************************/
   /*************************************************************************/
-  const {
-    ready,
-    user,
-    authenticated,
-    login,
-    connectWallet,
-    logout,
-    linkWallet,
-  } = usePrivy();
+  const { smartAccountClient, smartAccountAddress, isLoading, error } =
+    useSmartAccount();
+  const { ready, user, authenticated, login, connectWallet, logout } =
+    usePrivy();
 
   const router = useRouter();
-  const { address, isConnected, } = useAccount();
-
-  const {
-    data: createAccountHash,
-    writeContract: writeCreateAccount,
-    error: createAccountError,
-  } = useWriteContract();
-
-  const { isSuccess: isAccountTxSuccess, error: isAccountTxError } =
-    useTransactionReceipt({ hash: createAccountHash });
-
-  const { data: factoryOwner, error: factoryError } = useReadContract({
-    address: CONTRACT_ADDRESSES.ACCOUNT_FACTORY as `0x${string}`,
-    abi: ACCOUNT_FACTORY_ABI,
-    functionName: "s_owner",
-    query: {
-      enabled: !!CONTRACT_ADDRESSES.ACCOUNT_FACTORY,
-    },
-  });
-
-  const {
-    data: smartAccount,
-    error: smartAccountError,
-    refetch: smartAccountRefetch,
-  } = useReadContract({
-    address: CONTRACT_ADDRESSES.ACCOUNT_FACTORY as `0x${string}`,
-    abi: ACCOUNT_FACTORY_ABI,
-    functionName: "getUserClone",
-    args: [address!],
-    query: {
-      enabled: !!address && !!factoryOwner,
-    },
-  });
-
-  const { data: taskManager, refetch: taskManagerRefetch } = useReadContract({
-    address: smartAccount as `0x${string}`,
-    abi: SMART_ACCOUNT_ABI,
-    functionName: "taskManager",
-    query: {
-      enabled:
-        !!smartAccount &&
-        smartAccount !== "0x0000000000000000000000000000000000000000",
-    },
-  });
+  const { address, isConnected } = useAccount();
 
   /*************************************************************************/
   /** 🛠 CUSTOM HOOKS *****************************************************/
@@ -95,47 +39,49 @@ export function useDeploySmartAccount() {
   const setAccountAddress = useAddressStore(
     (state) => state.setSmartAccountAddress
   );
-  const setTaskManagerAddress = useAddressStore(
-    (state) => state.setTaskManagerAddress
-  );
+
 
   /*************************************************************************/
   /** 🚀 ACTION METHODS ***************************************************/
   /*************************************************************************/
   async function createAccount() {
-    const nonce = BigInt(0);
-    if (!address) {
+    if (!address || !smartAccountClient || !smartAccountClient.account || !smartAccountAddress) {
       setDeploymentState((prev) => ({
         ...prev,
         accountStep: "error",
-        accountError: "WALLET NOT CONNECTED",
+        accountError: "Client not ready or wallet not connected.",
       }));
-      toast.error("WALLET NOT CONNECTED")
-      console.log("ERROR:WALLET NOT CONNECTED");
+      toast.error("Client not ready or wallet not connected.");
       return;
     }
-    if (!factoryOwner) {
-      setDeploymentState((prev) => ({
-        ...prev,
-        accountStep: "error",
-        accountError: "ACCOUNT FACTORY NOT FOUND OR INVALID",
-      }));
-       toast.error("ACCOUNT FACTORY NOT FOUND OR INVALID")
-      console.log("ERROR:ACCOUNT FACTORY NOT FOUND OR INVALID");
-      return;
-    }
+
     setDeploymentState((prev) => ({ ...prev, accountStep: "creating" }));
 
     try {
-      await writeCreateAccount({
-        address: CONTRACT_ADDRESSES.ACCOUNT_FACTORY as `0x${string}`,
-        abi: ACCOUNT_FACTORY_ABI,
-        functionName: "createAccount",
-        args: [nonce],
+      const hash = await smartAccountClient.sendUserOperation({
+        calls: [
+          {
+            to: smartAccountAddress,
+            data: "0x", 
+            value: 0n,
+          },
+        ],
       });
+
+
+      await smartAccountClient.waitForUserOperationReceipt({ hash });
+
+      setDeploymentState((prev) => ({
+        ...prev,
+        accountStep: "created",
+      }));
     } catch (error) {
       console.log(error);
-      toast.error(`ACCOUNT CREATION FAILED: ${error instanceof Error ? error.message : "unknown error"}`);
+      toast.error(
+        `ACCOUNT CREATION FAILED: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`
+      );
       setDeploymentState((prev) => ({
         ...prev,
         accountStep: "error",
@@ -157,46 +103,40 @@ export function useDeploySmartAccount() {
   /** 📡 SIDE EFFECTS *****************************************************/
   /*************************************************************************/
   useEffect(() => {
-    const hasSmartAccount =
-      smartAccount &&
-      smartAccount !== "0x0000000000000000000000000000000000000000";
+    if (!smartAccountClient || !smartAccountAddress || !isLoading) return;
 
-    if (isAccountTxSuccess || hasSmartAccount) {
-      setDeploymentState((prev) => ({
-        ...prev,
-        accountStep: "created",
-      }));
-
-      async function refetchData() {
-        const { data: smartAccountData } = await smartAccountRefetch();
-        const { data: taskManagerData } = await taskManagerRefetch();
-        setAccountAddress(smartAccountData as `0x${string}`);
-        setTaskManagerAddress(taskManagerData as `0x${string}`);
+    const check = async () => {
+      setIsAccountDeployedLoading(true)
+      try {
+        const code = await publicClient.getCode({
+          address: smartAccountAddress,
+        });
+        if (code !== "0x") {
+          setDeploymentState((prev) => ({
+            ...prev,
+            accountStep: "created",
+          }));
+        }
+      } catch (err:any) {
+        console.error("Error fetching contract code:", err.message);
+      } finally {
+        setDeploymentState((prev) => ({
+          ...prev,
+        }));
       }
+      setAccountAddress(smartAccountAddress as `0x${string}`);
+    };
+    check();
+  }, [smartAccountClient, smartAccountAddress, isLoading]);
 
-      refetchData();
-    }
-  }, [isAccountTxSuccess, smartAccount]);
-
-  useEffect(() => {
-    if (isAccountTxError || createAccountError) {
-      setDeploymentState((prev) => ({
-        ...prev,
-        accountStep: "error",
-        accountError: `ACCOUNT CREATION FAILED`,
-      }));
-    }
-  }, [createAccountError, isAccountTxError]);
 
   /*************************************************************************/
   /** 🎯 RETURN API *******************************************************/
   /*************************************************************************/
   return {
-    smartAccount,
-    taskManager,
-    factoryOwner,
+    smartAccountAddress,
     deploymentState,
-    isConnected,
+    isAccountDeployedLoading,
     createAccount,
     debug,
     setDebug,
@@ -207,4 +147,5 @@ export function useDeploySmartAccount() {
     user,
     authenticated,
   };
+
 }
