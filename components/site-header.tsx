@@ -1,7 +1,7 @@
 "use client"
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import {  useSidebar } from "@/components/ui/sidebar";
 import Image from "next/image";
 import logo from "../public/logo.svg";
 import { IoWalletOutline } from "react-icons/io5";
