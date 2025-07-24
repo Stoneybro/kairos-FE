@@ -16,7 +16,6 @@ import { useEffect, useState } from "react";
 import { useAddressStore } from "../lib/store/addressStore";
 import { DeploymentState } from "../types/types";
 import { toast } from "sonner";
-import { log } from "console";
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
 /*************************************************************************/
