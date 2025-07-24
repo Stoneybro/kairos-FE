@@ -6,13 +6,18 @@ import { WalletSidebar } from "@/components/wallet-sidebar"
 import { useAddressStore } from "../lib/store/addressStore";
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
-import TasksList from "@/components/section-Tasktable";
 import { usePrivy } from "@privy-io/react-auth";
 import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar"
+import dynamic from 'next/dynamic'
 
+// Dynamic import with no SSR for components that use useMediaQuery
+const TasksList = dynamic(() => import("@/components/section-Tasktable"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-muted/70 p-6 rounded-2xl min-h-[60vh]">Loading tasks...</div>
+})
 
 /*//////////////////////////////////////////////////////////////
                                 TYPES

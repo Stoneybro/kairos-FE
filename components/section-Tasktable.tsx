@@ -11,8 +11,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/app/hooks/useDashboard";
-import TaskCreation from "./section-createtasks";
 import TaskCard from "./section-task";
+import dynamic from 'next/dynamic'
+
+// Dynamic import for TaskCreation component
+const TaskCreation = dynamic(() => import("./section-createtasks"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-background h-10 w-32 rounded-md"></div>
+})
 
 const TasksList = () => {
   /*//////////////////////////////////////////////////////////////*/
