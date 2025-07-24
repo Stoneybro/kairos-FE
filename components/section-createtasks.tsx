@@ -43,6 +43,7 @@ const TaskCreation = () => {
   const [open, setOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [selectedTime, setSelectedTime] = useState("10:30");
+  const [isClient, setIsClient] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   
   /*//////////////////////////////////////////////////////////////*/
@@ -69,6 +70,11 @@ const TaskCreation = () => {
     isDisabled,
     localSuccess
   } = useDashboard();
+
+  // Client-side only effect
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   /*//////////////////////////////////////////////////////////////*/
   //                           FUNCTIONS
@@ -161,6 +167,11 @@ const TaskCreation = () => {
       setOpen(false)
     }
   }, [localSuccess]);
+
+  // Don't render anything until client-side hydration is complete
+  if (!isClient) {
+    return null;
+  }
 
   /*//////////////////////////////////////////////////////////////*/
   //                               JSX
