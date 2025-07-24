@@ -9,17 +9,17 @@ import {
   useBlockNumber,
   useReadContract,
   useTransactionReceipt,
+  useWatchContractEvent,
   useWriteContract,
 } from "wagmi";
 import { SMART_ACCOUNT_ABI } from "../lib/contracts";
-import {formatUnits, parseEther } from "viem";
+import { formatUnits, parseEther } from "viem";
 
-import {toast} from "sonner";
+import { toast } from "sonner";
 import { useDataStore } from "../lib/store/dataStore";
 import { useDashboardHelper } from "./useDashboardHelper";
 import { TaskType } from "../types/types";
 import { PenaltyType } from "../types/types";
-
 
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
@@ -96,9 +96,57 @@ export function useDashboard() {
     useTransactionReceipt({
       hash: cancelTaskHash,
     });
-  const { data: blockNumber } = useBlockNumber({
-    watch: true,
+  useWatchContractEvent({
+    address: smartAccountAddress as `0x${string}`,
+    abi: SMART_ACCOUNT_ABI,
+    eventName: "TaskExpired",
+    onLogs: (logs) => {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      toast.success("Task Expired!");
+    },
   });
+
+  // Watch TaskCreated
+  useWatchContractEvent({
+    address: smartAccountAddress as `0x${string}`,
+    abi: SMART_ACCOUNT_ABI,
+    eventName: "TaskCreated",
+    onLogs: (logs) => {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      toast.success("Task Created");
+    },
+  });
+
+  // Watch TaskCompleted
+  useWatchContractEvent({
+    address: smartAccountAddress as `0x${string}`,
+    abi: SMART_ACCOUNT_ABI,
+    eventName: "TaskCompleted",
+    onLogs: (logs) => {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      toast.success("Task Completed");
+    },
+  });
+
+  // Watch TaskCanceled
+  useWatchContractEvent({
+    address: smartAccountAddress as `0x${string}`,
+    abi: SMART_ACCOUNT_ABI,
+    eventName: "TaskCanceled",
+    onLogs: (logs) => {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      toast.info("Task Canceled");
+    },
+  });
+
   const { address } = useAccount();
   const {
     data: pWalletBalance,
@@ -145,7 +193,6 @@ export function useDashboard() {
       enabled: !!smartAccountAddress,
     },
   });
-
 
   /*************************************************************************/
   /** 📡 HELPERS *****************************************************/
@@ -332,23 +379,12 @@ export function useDashboard() {
     }
   }, [taskDescription, rewardAmount, deadline, delayDuration, buddyAddress]);
 
-  useEffect(() => {
-    if (isCreateTaskSuccess) {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setLocalSuccess(true);
-    }
-  }, [blockNumber]);
-
   // Handle complete task success
   useEffect(() => {
     if (isCompleteTaskSuccess) {
       // Clear all completing tasks since we don't know which specific task completed
       setCompletingTasks(new Set());
       toast.success("Task completed successfully!");
-
-      // Refetch data
       taskRefetch();
       balanceRefetch();
       commitedFundsrefetch();

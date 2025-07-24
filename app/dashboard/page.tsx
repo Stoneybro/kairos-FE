@@ -1,6 +1,5 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useDashboard } from "../hooks/useDashboard";
 import { useEffect } from "react";
 import { WalletSidebar } from "@/components/wallet-sidebar"
 import { useAddressStore } from "../lib/store/addressStore";
@@ -12,6 +11,7 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar"
+import { Loader2 } from "lucide-react";
 
 
 /*//////////////////////////////////////////////////////////////
@@ -35,40 +35,8 @@ export default function Dashboard() {
   /*//////////////////////////////////////////////////////////////
                             CUSTOM HOOKS
 //////////////////////////////////////////////////////////////*/
-const {
-  showCreateTask,
-  setShowCreateTask,
-  activeTab,
-  setActiveTab,
-  createTaskButton,
-  setCreateTaskButton,
-  taskDescription,
-  setTaskDescription,
-  rewardAmount,
-  setRewardAmount,
-  deadline,
-  setDeadline,
-  delayDuration,
-  setDelayDuration,
-  buddyAddress,
-  setBuddyAddress,
-  penaltyType,
-  setPenaltyType,
-  taskFormError,
-  setTaskFormError,
-  accountBalance,
-  commitedFunds,
-  availableBalance,
-  activeTasks,
-  filteredTasks,
-  completeTask,
-  cancelTask,
-  isSideBarOpen,
-  isDisabled,
-  createTask
-}=useDashboard();
 
-const {authenticated}=usePrivy()
+const {authenticated,ready}=usePrivy()
 
   /*//////////////////////////////////////////////////////////////
                              FUNCTIONS
@@ -78,14 +46,15 @@ const {authenticated}=usePrivy()
                               USEEFFECTS
   //////////////////////////////////////////////////////////////*/
   useEffect(()=>{
-    if (!authenticated && !smartAccountAddress ) {
+    if (ready && !authenticated && !smartAccountAddress ) {
       router.push("/");
     }
-  },[authenticated])
+  },[authenticated,ready])
 
   /*//////////////////////////////////////////////////////////////
                               JSX
   //////////////////////////////////////////////////////////////*/
+
 
   return (
     <SidebarProvider

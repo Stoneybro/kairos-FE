@@ -311,7 +311,7 @@ const TaskCard = ({
             </div>
 
             {/* Penalty */}
-           { getStatusText(TaskStatus[status]) == "Expired" || getStatusText(TaskStatus[status]) == "Active" &&<div className='flex items-center justify-start px-2 bg-[#DB242405] border-tag-expired border-[1px] rounded-lg py-1 gap-1 my-4'>
+           { <div className='flex items-center justify-start px-2 bg-[#DB242405] border-tag-expired border-[1px] rounded-lg py-1 gap-1 my-4'>
               <span className='text-text-tag-expired text-xs'>Penalty:</span>
               <span className='text-[11px] flex text-right'>
                 {renderPenaltyInfo()}
