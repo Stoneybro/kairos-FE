@@ -1,5 +1,5 @@
 import type { PrivyClientConfig } from "@privy-io/react-auth";
-import { anvil, base, baseSepolia } from "viem/chains";
+import {  baseSepolia} from "viem/chains";
 
 // Replace this with your Privy config
 export const privyConfig: PrivyClientConfig = {
@@ -7,8 +7,8 @@ export const privyConfig: PrivyClientConfig = {
     createOnLogin: "users-without-wallets",
     requireUserPasswordOnCreate: false,
   },
-  defaultChain:anvil,
-  supportedChains: [base, baseSepolia, anvil],
+  defaultChain:baseSepolia,
+  supportedChains: [baseSepolia],
   loginMethods: ["wallet", "email", "google"],
   appearance: {
     accentColor: "#38CCCD",

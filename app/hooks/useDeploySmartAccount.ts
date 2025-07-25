@@ -27,6 +27,8 @@ export function useDeploySmartAccount() {
   /*************************************************************************/
   const { smartAccountClient, smartAccountAddress, isLoading, error } =
     useSmartAccount();
+
+    
   const { ready, user, authenticated, login, connectWallet, logout } =
     usePrivy();
 
@@ -45,7 +47,9 @@ export function useDeploySmartAccount() {
   /** 🚀 ACTION METHODS ***************************************************/
   /*************************************************************************/
   async function createAccount() {
-    if (!address || !smartAccountClient || !smartAccountClient.account || !smartAccountAddress) {
+    console.log(address, smartAccountClient);
+    
+    if (!address || !smartAccountClient ) {
       setDeploymentState((prev) => ({
         ...prev,
         accountStep: "error",
@@ -62,7 +66,7 @@ export function useDeploySmartAccount() {
         account: smartAccountClient.account,
         calls: [
           {
-            to: smartAccountAddress,
+            to: smartAccountAddress as `0x${string}`,
             data: "0x", 
             value: 0n,
           },
@@ -104,7 +108,7 @@ export function useDeploySmartAccount() {
   /** 📡 SIDE EFFECTS *****************************************************/
   /*************************************************************************/
   useEffect(() => {
-    if (!smartAccountClient || !smartAccountAddress || !isLoading) return;
+    if (!smartAccountClient || !smartAccountAddress ||smartAccountAddress === "0x0000000000000000000000000000000000000000" ) return;
 
     const check = async () => {
       setIsAccountDeployedLoading(true)
@@ -112,7 +116,7 @@ export function useDeploySmartAccount() {
         const code = await publicClient.getCode({
           address: smartAccountAddress,
         });
-        if (code !== "0x") {
+        if (code !== "0x" || code !== undefined) {
           setDeploymentState((prev) => ({
             ...prev,
             accountStep: "created",

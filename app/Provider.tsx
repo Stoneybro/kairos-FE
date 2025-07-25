@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <PrivyProvider appId="cmd8m1w3p0031jy0mmmon7ytw" config={privyConfig}>
+    <PrivyProvider appId={`${process.env.NEXT_PUBLIC_PRIVY_ID}`} config={privyConfig}>
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
     
