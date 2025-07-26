@@ -51,7 +51,7 @@ export function SidebarHeader({
   /*//////////////////////////////////////////////////////////////
                                 FUNCTIONS
 //////////////////////////////////////////////////////////////*/
-console.log(accountBalance,"accountBalance")
+
 
   const formattedBalance = formatUnits(
     data ? data.value : 0n,
