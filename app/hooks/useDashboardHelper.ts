@@ -90,20 +90,21 @@ const deadlineInSeconds = deadline ? Math.floor(deadline.getTime() / 1000) : und
     tasks && tasks.length > 0 && completedTasks
       ? (completedTasks.length / tasks.length) * 100
       : 0;
-  const isDisabled =
-    taskDescription.trim().length < 5 ||
-    !/^\d*\.?\d{0,18}$/.test(rewardAmount) ||
-    parseFloat(rewardAmount) <= 0 ||
-    !deadline ||
-    new Date(deadline).getTime() <= Date.now() ||
-    (penaltyType === PenaltyType.DELAY_PAYMENT &&
-      (!/^\d+$/.test(delayDuration) ||
-        parseInt(delayDuration) <= 0 ||
-        parseInt(delayDuration) > 30)) ||
-    (penaltyType === PenaltyType.SEND_BUDDY &&
-      !/^0x[a-fA-F0-9]{40}$/.test(buddyAddress)) ||
-    createTaskButton == "Creating Task" ||
-    createTaskButton == "Task Created";
+const isDisabled =
+  taskDescription.trim().length < 5 ||
+  !/^\d*\.?\d{0,18}$/.test(rewardAmount) ||
+  parseFloat(rewardAmount) <= 0 ||
+  !deadline ||
+  new Date(deadline).getTime() <= Date.now() ||
+  penaltyType === PenaltyType.UNDEFINED ||
+  (penaltyType === PenaltyType.DELAY_PAYMENT &&
+    (!/^\d+$/.test(delayDuration) ||
+      parseInt(delayDuration) <= 0 ||
+      parseInt(delayDuration) > 30)) ||
+  (penaltyType === PenaltyType.SEND_BUDDY &&
+    !/^0x[a-fA-F0-9]{40}$/.test(buddyAddress)) ||
+  createTaskButton == "Creating Task" ||
+  createTaskButton == "Task Created";
 
   function truncateAddress(address: string, start = 6, end = 4) {
     if (!address) return "";

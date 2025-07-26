@@ -72,7 +72,8 @@ const TaskCreation = () => {
     createTask,
     isDisabled,
     localSuccess,
-    availableBalance
+    availableBalance,
+    setLocalSuccess
   } = useDashboard();
 
   // Client-side only effect
@@ -83,7 +84,7 @@ const balance=String(formatEther(availableBalance))
   /*//////////////////////////////////////////////////////////////*/
   //                           FUNCTIONS
   /*//////////////////////////////////////////////////////////////*/
-  // Function to combine date and time into a single Date object
+
   const combineDateTime = (date: Date | undefined, timeString: string): Date | undefined => {
     if (!date) return undefined;
     
@@ -183,22 +184,29 @@ const balance=String(formatEther(availableBalance))
     return totalHours >= 1 && totalHours <= 720 && daysNum <= 30 && hoursNum <= 23;
   };
 
-  useEffect(() => {
-    if (createTaskButton == "Creating Task" && localSuccess) {
-      setCreateTaskButton("Task Created");
-      setTaskDescription("");
-      setRewardAmount("");
-      setDeadline(undefined);
-      setDelayDuration("");
-      setDelayDays("");
-      setDelayHours("");
-      setBuddyAddress("");
-      setPenaltyType(PenaltyType.UNDEFINED);
-      setSelectedTime("10:30"); // Reset time as well
-      toast.success("Task Created Successfully");
-      setOpen(false)
-    }
-  }, [localSuccess]);
+useEffect(() => {
+  if (localSuccess) {
+    // Clear form
+    setTaskDescription("");
+    setRewardAmount("");
+    setDeadline(undefined);
+    setDelayDuration("");
+    setDelayDays("");
+    setDelayHours("");
+    setBuddyAddress("");
+    setPenaltyType(PenaltyType.UNDEFINED);
+    setSelectedTime("10:30");
+    setOpen(false);
+    
+    // Reset button state after a short delay to show success state briefly
+    setTimeout(() => {
+      setCreateTaskButton("Create Task");
+      setLocalSuccess(false);
+    }, 1000);
+    
+    toast.success("Task Created Successfully");
+  }
+}, [localSuccess]);
 
   // Don't render anything until client-side hydration is complete
   if (!isClient) {

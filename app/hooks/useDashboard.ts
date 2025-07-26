@@ -20,15 +20,13 @@ import { useDataStore } from "../lib/store/dataStore";
 import { useDashboardHelper } from "./useDashboardHelper";
 import { TaskType } from "../types/types";
 import { PenaltyType } from "../types/types";
-import debounce from 'lodash/debounce';
-
-
+import { error } from "console";
 
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
 /*************************************************************************/
 /**
- * 
+ *
  * @dev break down this hook, its too large
  */
 export function useDashboard() {
@@ -51,7 +49,17 @@ export function useDashboard() {
   const [penaltyType, setPenaltyType] = useState(PenaltyType.UNDEFINED);
   const [taskFormError, setTaskFormError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState(false);
-
+  const [createTaskTimeoutId, setCreateTaskTimeoutId] =
+    useState<NodeJS.Timeout | null>(null);
+  const [completeTaskTimeouts, setCompleteTaskTimeouts] = useState<
+    Map<string, NodeJS.Timeout>
+  >(new Map());
+  const [cancelTaskTimeouts, setCancelTaskTimeouts] = useState<
+    Map<string, NodeJS.Timeout>
+  >(new Map());
+  const [releasePaymentTimeouts, setReleasePaymentTimeouts] = useState<
+    Map<string, NodeJS.Timeout>
+  >(new Map());
   // Add states for tracking which tasks are being operated on
   const [completingTasks, setCompletingTasks] = useState<Set<string>>(
     new Set()
@@ -81,15 +89,16 @@ export function useDashboard() {
   /*************************************************************************/
   /** 🪝 WAGMI / OTHER HOOKS **********************************************/
   /*************************************************************************/
-/**
- * 
- * @dev // rewrite useWriteContract to use only useWriteContract hook, use state to save the hashes
- */
+  /**
+   *
+   * @dev // rewrite useWriteContract to use only useWriteContract hook, use state to save the hashes
+   */
   const { data: createTaskHash, writeContract: useWriteCreateTask } =
     useWriteContract();
-  const { isSuccess: isCreateTaskSuccess } = useTransactionReceipt({
-    hash: createTaskHash,
-  });
+  const { isSuccess: isCreateTaskSuccess, isError: isCreateTaskError } =
+    useTransactionReceipt({
+      hash: createTaskHash,
+    });
   const { data: completeTaskHash, writeContract: useWriteCompleteTask } =
     useWriteContract();
   const { isSuccess: isCompleteTaskSuccess, isError: isCompleteTaskError } =
@@ -106,6 +115,10 @@ export function useDashboard() {
     useTransactionReceipt({
       hash: cancelTaskHash,
     });
+
+  /**
+   * @dev removed this because of the rpc calls
+   */
 
   // useWatchContractEvent({
   //   address: smartAccountAddress as `0x${string}`,
@@ -208,121 +221,233 @@ export function useDashboard() {
   //fix the addressstore problem
   // In useDashboard.js, fix the createTask function:
 
-  async function createTask() {
-    const formValidity = validateTaskForm();
-    if (formValidity !== true) {
-      // Use the specific error message from the validation function
-      toast.error(formValidity);
-      return;
-    }
-    setCreateTaskButton("Creating Task");
+async function createTask() {
+  const formValidity = validateTaskForm();
+  if (formValidity !== true) {
+    toast.error(formValidity);
+    return;
+  }
+  setCreateTaskButton("Creating Task");
 
-    // Calculate deadline duration in seconds from now
-    const deadlineInSeconds = deadline
-      ? BigInt(
-          Math.floor(deadline.getTime() / 1000) - Math.floor(Date.now() / 1000)
-        )
-      : BigInt(0);
-
-    try {
-      await useWriteCreateTask({
-        address: smartAccountAddress as `0x${string}`,
-        abi: SMART_ACCOUNT_ABI,
-        functionName: "createTask",
-        args: [
-          taskDescription,
-          parseEther(rewardAmount),
-          deadlineInSeconds, // This should be duration, not absolute timestamp
-          penaltyType === PenaltyType.DELAY_PAYMENT ? 1 : 2,
-          penaltyType === PenaltyType.SEND_BUDDY
-            ? (buddyAddress as `0x${string}`)
-            : "0x0000000000000000000000000000000000000000",
-          penaltyType === PenaltyType.DELAY_PAYMENT
-            ? BigInt(parseInt(delayDuration) * 86400)
-            : BigInt(0),
-        ],
-      });
-    } catch (error) {
-      console.log(error);
-      setCreateTaskButton("Create Task");
-    }
+  // Clear any existing timeout
+  if (createTaskTimeoutId) {
+    clearTimeout(createTaskTimeoutId);
   }
 
-  async function completeTask(id: bigint) {
-    if (taskCount == 0) {
-      console.log("no tasks available");
-      return;
+  // Set a timeout to reset the button state (10 seconds)
+  const timeoutId = setTimeout(() => {
+    setCreateTaskButton("Create Task");
+    toast.error("Transaction timed out. Please try again.");
+  }, 15000);
+
+  setCreateTaskTimeoutId(timeoutId);
+
+  const deadlineInSeconds = deadline
+    ? BigInt(
+        Math.floor(deadline.getTime() / 1000) - Math.floor(Date.now() / 1000)
+      )
+    : BigInt(0);
+
+  try {
+    await useWriteCreateTask({
+      address: smartAccountAddress as `0x${string}`,
+      abi: SMART_ACCOUNT_ABI,
+      functionName: "createTask",
+      args: [
+        taskDescription,
+        parseEther(rewardAmount),
+        deadlineInSeconds,
+        penaltyType === PenaltyType.DELAY_PAYMENT ? 1 : 2,
+        penaltyType === PenaltyType.SEND_BUDDY
+          ? (buddyAddress as `0x${string}`)
+          : "0x0000000000000000000000000000000000000000",
+        penaltyType === PenaltyType.DELAY_PAYMENT
+          ? BigInt(parseInt(delayDuration) * 86400)
+          : BigInt(0),
+      ],
+    });
+  } catch (error) {
+    console.log(error);
+    // Clear timeout on immediate error
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      setCreateTaskTimeoutId(null);
     }
+    setCreateTaskButton("Create Task");
+    toast.error("Transaction failed. Please try again.");
+  }
+}
 
-    const taskId = id.toString();
-
-    // Add task to completing set
-    setCompletingTasks((prev) => new Set([...prev, taskId]));
-
-    try {
-      await useWriteCompleteTask({
-        address: smartAccountAddress as `0x${string}`,
-        abi: SMART_ACCOUNT_ABI,
-        functionName: "completeTask",
-        args: [id],
-      });
-    } catch (error) {
-      console.log(error);
-      // Remove from completing set on error
-      setCompletingTasks((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(taskId);
-        return newSet;
-      });
-    }
+async function completeTask(id: bigint) {
+  if (taskCount == 0) {
+    console.log("no tasks available");
+    return;
   }
 
-  async function cancelTask(id: bigint) {
-    if (taskCount == 0) {
-      console.log("no tasks available");
-      return;
-    }
+  const taskId = id.toString();
 
-    const taskId = id.toString();
+  // Add task to completing set
+  setCompletingTasks((prev) => new Set([...prev, taskId]));
 
-    // Add task to canceling set
-    setCancelingTasks((prev) => new Set([...prev, taskId]));
+  // Set timeout for this specific task (10 seconds)
+  const timeoutId = setTimeout(() => {
+    setCompletingTasks((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(taskId);
+      return newSet;
+    });
+    // Also remove from timeout map
+    setCompleteTaskTimeouts((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(taskId);
+      return newMap;
+    });
+    toast.error("Transaction timed out. Please try again.");
+  }, 15000);
 
-    try {
-      await useWriteCancelTask({
-        address: smartAccountAddress as `0x${string}`,
-        abi: SMART_ACCOUNT_ABI,
-        functionName: "cancelTask",
-        args: [id],
+  setCompleteTaskTimeouts((prev) => new Map([...prev, [taskId, timeoutId]]));
+
+  try {
+    await useWriteCompleteTask({
+      address: smartAccountAddress as `0x${string}`,
+      abi: SMART_ACCOUNT_ABI,
+      functionName: "completeTask",
+      args: [id],
+    });
+  } catch (error) {
+    console.log(error);
+    // Clear timeout and reset state on immediate error
+    const timeoutToClear = completeTaskTimeouts.get(taskId);
+    if (timeoutToClear) {
+      clearTimeout(timeoutToClear);
+      setCompleteTaskTimeouts((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(taskId);
+        return newMap;
       });
-    } catch (error) {
-      console.log(error);
-      // Remove from canceling set on error
-      setCancelingTasks((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(taskId);
-        return newSet;
-      });
     }
+    setCompletingTasks((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(taskId);
+      return newSet;
+    });
+    toast.error("Transaction failed. Please try again.");
   }
-  async function releasePayment(id: bigint) {
-    if (taskCount == 0) {
-      console.log("no tasks available");
-      return;
-    }
-    setReleasingPayment((prev) => new Set([...prev, id.toString()]));
-    try {
-      await useWritereleasePayment({
-        address: smartAccountAddress as `0x${string}`,
-        abi: SMART_ACCOUNT_ABI,
-        functionName: "releaseDelayedPayment",
-        args: [id],
-      });
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to release payment. Please try again.");
-    }
+}
+
+async function cancelTask(id: bigint) {
+  if (taskCount == 0) {
+    console.log("no tasks available");
+    return;
   }
+
+  const taskId = id.toString();
+
+  // Add task to canceling set
+  setCancelingTasks((prev) => new Set([...prev, taskId]));
+
+  // Set timeout for this specific task (10 seconds)
+  const timeoutId = setTimeout(() => {
+    setCancelingTasks((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(taskId);
+      return newSet;
+    });
+    // Also remove from timeout map
+    setCancelTaskTimeouts((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(taskId);
+      return newMap;
+    });
+    toast.error("Transaction timed out. Please try again.");
+  }, 15000);
+
+  setCancelTaskTimeouts((prev) => new Map([...prev, [taskId, timeoutId]]));
+
+  try {
+    await useWriteCancelTask({
+      address: smartAccountAddress as `0x${string}`,
+      abi: SMART_ACCOUNT_ABI,
+      functionName: "cancelTask",
+      args: [id],
+    });
+  } catch (error) {
+    console.log(error);
+    // Clear timeout and reset state on immediate error
+    const timeoutToClear = cancelTaskTimeouts.get(taskId); // Fixed: was using completeTaskTimeouts
+    if (timeoutToClear) {
+      clearTimeout(timeoutToClear);
+      setCancelTaskTimeouts((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(taskId);
+        return newMap;
+      });
+    }
+    setCancelingTasks((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(taskId);
+      return newSet;
+    });
+    toast.error("Transaction failed. Please try again.");
+  }
+}
+
+async function releasePayment(id: bigint) { // Fixed: changed parameter type to bigint
+  if (taskCount == 0) {
+    console.log("no tasks available");
+    return;
+  }
+
+  const taskId = id.toString();
+
+  // Add task to releasing payment set
+  setReleasingPayment((prev) => new Set([...prev, taskId]));
+
+  // Set timeout for this specific task (10 seconds)
+  const timeoutId = setTimeout(() => {
+    setReleasingPayment((prev) => { // Fixed: was using setCancelingTasks
+      const newSet = new Set(prev);
+      newSet.delete(taskId);
+      return newSet;
+    });
+    // Also remove from timeout map
+    setReleasePaymentTimeouts((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(taskId);
+      return newMap;
+    });
+    toast.error("Transaction timed out. Please try again.");
+  }, 15000);
+
+  setReleasePaymentTimeouts((prev) => new Map([...prev, [taskId, timeoutId]]));
+
+  try {
+    await useWritereleasePayment({
+      address: smartAccountAddress as `0x${string}`,
+      abi: SMART_ACCOUNT_ABI,
+      functionName: "releaseDelayedPayment",
+      args: [id], // Fixed: use id directly, not BigInt(taskId)
+    });
+  } catch (error) {
+    console.log(error);
+    // Clear timeout and reset state on immediate error
+    const timeoutToClear = releasePaymentTimeouts.get(taskId);
+    if (timeoutToClear) {
+      clearTimeout(timeoutToClear);
+      setReleasePaymentTimeouts((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(taskId);
+        return newMap;
+      });
+    }
+    setReleasingPayment((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(taskId);
+      return newSet;
+    });
+    toast.error("Failed to release payment. Please try again.");
+  }
+}
   // Helper functions to check if a specific task is being operated on
   const isTaskCompleting = (taskId: bigint) => {
     return completingTasks.has(taskId.toString());
@@ -339,52 +464,79 @@ export function useDashboard() {
   /** 📡 SIDE EFFECTS *****************************************************/
   /*************************************************************************/
 
-  useEffect(() => {
-    if (createTaskButton === "Task Created") {
-      setCreateTaskButton("Create Task");
-      setLocalSuccess(false);
-    }
-  }, [taskDescription, rewardAmount, deadline, delayDuration, buddyAddress]);
+  
+// Update your existing useEffect handlers to clear timeouts
 
- useEffect(() => {
-    if (isReleasePaymentSuccess) {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setReleasingPayment(new Set());
-      toast.info("Payment Released Successfully");
+useEffect(() => {
+  if (isCreateTaskSuccess) {
+    // Clear the timeout since transaction succeeded
+    if (createTaskTimeoutId) {
+      clearTimeout(createTaskTimeoutId);
+      setCreateTaskTimeoutId(null);
     }
-  }, [isReleasePaymentSuccess]);
+    
+    taskRefetch();
+    balanceRefetch();
+    commitedFundsrefetch();
+    setCreateTaskButton("Task Created");
+    setLocalSuccess(true);
+    toast.success("Task Created");
+  }
+}, [isCreateTaskSuccess]);
 
-  useEffect(() => {
-    if (isCreateTaskSuccess) {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setCreateTaskButton("Task Created");
-      toast.success("Task Created");
-    }
-  }, [isCreateTaskSuccess]);
+useEffect(() => {
+  if (isCompleteTaskSuccess) {
+    // Clear all completion timeouts since we don't know which task completed
+    completeTaskTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    setCompleteTaskTimeouts(new Map());
+    
+    taskRefetch();
+    balanceRefetch();
+    commitedFundsrefetch();
+    setCompletingTasks(new Set());
+    toast.success("Task completed successfully!");
+  }
+}, [isCompleteTaskSuccess]);
 
-  useEffect(() => {
-    if (isCompleteTaskSuccess) {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setCompletingTasks(new Set());
-      toast.success("Task completed successfully!");
-    }
-  }, [isCompleteTaskSuccess]);
+useEffect(() => {
+  if (isCancelTaskSuccess) {
+    // Clear all cancel timeouts
+    cancelTaskTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    setCancelTaskTimeouts(new Map());
+    
+    taskRefetch();
+    balanceRefetch();
+    commitedFundsrefetch();
+    setCancelingTasks(new Set());
+    toast.info("Task canceled successfully!");
+  }
+}, [isCancelTaskSuccess]);
 
-  useEffect(() => {
-    if (isCancelTaskSuccess) {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setCancelingTasks(new Set());
-      toast.info("Task canceled successfully!");
+useEffect(() => {
+  if (isReleasePaymentSuccess) {
+    // Clear all release payment timeouts
+    releasePaymentTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    setReleasePaymentTimeouts(new Map());
+    
+    taskRefetch();
+    balanceRefetch();
+    commitedFundsrefetch();
+    setReleasingPayment(new Set());
+    toast.info("Payment Released Successfully");
+  }
+}, [isReleasePaymentSuccess]);
+
+// Add cleanup effect for component unmount
+useEffect(() => {
+  return () => {
+    if (createTaskTimeoutId) {
+      clearTimeout(createTaskTimeoutId);
     }
-  }, [isCancelTaskSuccess]);
+    completeTaskTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    cancelTaskTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    releasePaymentTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+  };
+}, []);
 
   useEffect(() => {
     setaccountBalanceRefetch(balanceRefetch);
@@ -395,7 +547,36 @@ export function useDashboard() {
     setaccountBalanceRefetch,
     setCommitedFundsRefetch,
   ]);
+  useEffect(() => {
+    if (isCreateTaskError) {
+      setCreateTaskButton("Create Task");
+      toast.error("Transaction failed. Please try again.");
+    }
+  }, [isCreateTaskError]);
 
+  // Similarly for other transactions
+  useEffect(() => {
+    if (isCompleteTaskError) {
+      // Remove from completing set on error
+      setCompletingTasks(new Set());
+      toast.error("Failed to complete task. Please try again.");
+    }
+  }, [isCompleteTaskError]);
+
+  useEffect(() => {
+    if (isCancelTaskError) {
+      // Remove from canceling set on error
+      setCancelingTasks(new Set());
+      toast.error("Failed to cancel task. Please try again.");
+    }
+  }, [isCancelTaskError]);
+
+  useEffect(() => {
+    if (isReleasePaymentError) {
+      setReleasingPayment(new Set());
+      toast.error("Failed to release payment. Please try again.");
+    }
+  }, [isReleasePaymentError]);
   /*************************************************************************/
   /** 🎯 RETURN API *******************************************************/
   /*************************************************************************/
@@ -445,6 +626,7 @@ export function useDashboard() {
     truncateAddress,
     formattedPersonalBalance,
     localSuccess,
+    setLocalSuccess,
     isCompleteTaskSuccess,
     isCancelTaskSuccess,
     isTaskCompleting,
