@@ -20,11 +20,17 @@ import { useDataStore } from "../lib/store/dataStore";
 import { useDashboardHelper } from "./useDashboardHelper";
 import { TaskType } from "../types/types";
 import { PenaltyType } from "../types/types";
+import debounce from 'lodash/debounce';
+
+
 
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
 /*************************************************************************/
-
+/**
+ * 
+ * @dev break down this hook, its too large
+ */
 export function useDashboard() {
   /*************************************************************************/
   /** 🧠 STATES ***********************************************************/
@@ -75,6 +81,10 @@ export function useDashboard() {
   /*************************************************************************/
   /** 🪝 WAGMI / OTHER HOOKS **********************************************/
   /*************************************************************************/
+/**
+ * 
+ * @dev // rewrite useWriteContract to use only useWriteContract hook, use state to save the hashes
+ */
   const { data: createTaskHash, writeContract: useWriteCreateTask } =
     useWriteContract();
   const { isSuccess: isCreateTaskSuccess } = useTransactionReceipt({
@@ -96,72 +106,18 @@ export function useDashboard() {
     useTransactionReceipt({
       hash: cancelTaskHash,
     });
-  useWatchContractEvent({
-    address: smartAccountAddress as `0x${string}`,
-    abi: SMART_ACCOUNT_ABI,
-    eventName: "TaskExpired",
-    onLogs: (logs) => {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      toast.success("Task Expired!");
-    },
-  });
 
-  // Watch TaskCreated
-  useWatchContractEvent({
-    address: smartAccountAddress as `0x${string}`,
-    abi: SMART_ACCOUNT_ABI,
-    eventName: "TaskCreated",
-    onLogs: (logs) => {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      toast.success("Task Created");
-    },
-  });
-
-  // Watch TaskCompleted
-  useWatchContractEvent({
-    address: smartAccountAddress as `0x${string}`,
-    abi: SMART_ACCOUNT_ABI,
-    eventName: "TaskCompleted",
-    onLogs: (logs) => {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setCompletingTasks(new Set());
-      toast.success("Task completed successfully!");
-    },
-  });
-
-  // Watch TaskCanceled
-  useWatchContractEvent({
-    address: smartAccountAddress as `0x${string}`,
-    abi: SMART_ACCOUNT_ABI,
-    eventName: "TaskCanceled",
-    onLogs: (logs) => {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-            setCancelingTasks(new Set());
-      toast.info("Task canceled successfully!");
-
-    },
-  });
-
-  useWatchContractEvent({
-    address: smartAccountAddress as `0x${string}`,
-    abi: SMART_ACCOUNT_ABI,
-    eventName: "DelayedPaymentReleased",
-    onLogs: (logs) => {
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-      setReleasingPayment(new Set());
-      toast.info("Payment Released Successfully");
-    },
-  });
+  // useWatchContractEvent({
+  //   address: smartAccountAddress as `0x${string}`,
+  //   abi: SMART_ACCOUNT_ABI,
+  //   eventName: "TaskExpired",
+  //   onLogs: debounce((logs) => {
+  //     taskRefetch();
+  //     balanceRefetch();
+  //     commitedFundsrefetch();
+  //     toast.info("Task Expired");
+  //   }, 1000)
+  // });
 
   const { address } = useAccount();
   const {
@@ -390,6 +346,45 @@ export function useDashboard() {
     }
   }, [taskDescription, rewardAmount, deadline, delayDuration, buddyAddress]);
 
+ useEffect(() => {
+    if (isReleasePaymentSuccess) {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      setReleasingPayment(new Set());
+      toast.info("Payment Released Successfully");
+    }
+  }, [isReleasePaymentSuccess]);
+
+  useEffect(() => {
+    if (isCreateTaskSuccess) {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      setCreateTaskButton("Task Created");
+      toast.success("Task Created");
+    }
+  }, [isCreateTaskSuccess]);
+
+  useEffect(() => {
+    if (isCompleteTaskSuccess) {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      setCompletingTasks(new Set());
+      toast.success("Task completed successfully!");
+    }
+  }, [isCompleteTaskSuccess]);
+
+  useEffect(() => {
+    if (isCancelTaskSuccess) {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      setCancelingTasks(new Set());
+      toast.info("Task canceled successfully!");
+    }
+  }, [isCancelTaskSuccess]);
 
   useEffect(() => {
     setaccountBalanceRefetch(balanceRefetch);
