@@ -236,7 +236,7 @@ export function useDashboard() {
   //fix the addressstore problem
   // In useDashboard.js, fix the createTask function:
 
-  console.log("tasks", tasks);
+
 
   async function createTask() {
     const formValidity = validateTaskForm();
