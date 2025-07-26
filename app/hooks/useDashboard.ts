@@ -130,7 +130,8 @@ export function useDashboard() {
       taskRefetch();
       balanceRefetch();
       commitedFundsrefetch();
-      toast.success("Task Completed");
+      setCompletingTasks(new Set());
+      toast.success("Task completed successfully!");
     },
   });
 
@@ -143,7 +144,22 @@ export function useDashboard() {
       taskRefetch();
       balanceRefetch();
       commitedFundsrefetch();
-      toast.info("Task Canceled");
+            setCancelingTasks(new Set());
+      toast.info("Task canceled successfully!");
+
+    },
+  });
+
+  useWatchContractEvent({
+    address: smartAccountAddress as `0x${string}`,
+    abi: SMART_ACCOUNT_ABI,
+    eventName: "DelayedPaymentReleased",
+    onLogs: (logs) => {
+      taskRefetch();
+      balanceRefetch();
+      commitedFundsrefetch();
+      setReleasingPayment(new Set());
+      toast.info("Payment Released Successfully");
     },
   });
 
@@ -235,8 +251,6 @@ export function useDashboard() {
   /*************************************************************************/
   //fix the addressstore problem
   // In useDashboard.js, fix the createTask function:
-
-
 
   async function createTask() {
     const formValidity = validateTaskForm();
@@ -368,9 +382,6 @@ export function useDashboard() {
   /*************************************************************************/
   /** 📡 SIDE EFFECTS *****************************************************/
   /*************************************************************************/
-  useEffect(() => {
-    taskRefetch();
-  }, [isCreateTaskSuccess, isCompleteTaskSuccess, isCancelTaskSuccess]);
 
   useEffect(() => {
     if (createTaskButton === "Task Created") {
@@ -379,67 +390,21 @@ export function useDashboard() {
     }
   }, [taskDescription, rewardAmount, deadline, delayDuration, buddyAddress]);
 
-  // Handle complete task success
-  useEffect(() => {
-    if (isCompleteTaskSuccess) {
-      // Clear all completing tasks since we don't know which specific task completed
-      setCompletingTasks(new Set());
-      toast.success("Task completed successfully!");
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-    }
-  }, [isCompleteTaskSuccess]);
 
-  // Handle complete task error
-  useEffect(() => {
-    if (isCompleteTaskError) {
-      // Clear all completing tasks on error
-      setCompletingTasks(new Set());
-      toast.error("Failed to complete task. Please try again.");
-    }
-  }, [isCompleteTaskError]);
-
-  // Handle cancel task success
-  useEffect(() => {
-    if (isCancelTaskSuccess) {
-      // Clear all canceling tasks since we don't know which specific task was canceled
-      setCancelingTasks(new Set());
-      toast.success("Task canceled successfully!");
-
-      // Refetch data
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-    }
-  }, [isCancelTaskSuccess]);
-
-  // Handle cancel task error
-  useEffect(() => {
-    if (isCancelTaskError) {
-      // Clear all canceling tasks on error
-      setCancelingTasks(new Set());
-      toast.error("Failed to cancel task. Please try again.");
-    }
-  }, [isCancelTaskError]);
-  useEffect(() => {
-    if (isReleasePaymentSuccess) {
-      setReleasingPayment(new Set());
-      toast.success("Payment released successfully!");
-      taskRefetch();
-      balanceRefetch();
-      commitedFundsrefetch();
-    }
-  }, [isReleasePaymentSuccess]);
   useEffect(() => {
     setaccountBalanceRefetch(balanceRefetch);
     setCommitedFundsRefetch(commitedFundsrefetch);
-  }, [_accountBalance, _commitedFunds]);
+  }, [
+    balanceRefetch,
+    commitedFundsrefetch,
+    setaccountBalanceRefetch,
+    setCommitedFundsRefetch,
+  ]);
 
   /*************************************************************************/
   /** 🎯 RETURN API *******************************************************/
   /*************************************************************************/
-  console.log(accountBalance,pWalletBalance)
+  console.log(accountBalance, pWalletBalance);
   return {
     showCreateTask,
     setShowCreateTask,
