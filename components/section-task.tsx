@@ -197,23 +197,39 @@ const TaskCard = ({
     releasePayment(id);
   };
 
-  const renderPenaltyInfo = () => {
-    if (choice === PenaltyType.DELAY_PAYMENT) {
-      const delayDays = Number(delayDuration) / 86400;
-      return (
-        <div className='flex flex-col gap-1'>
-          <span>Delay payment by {delayDays} days</span>
-        </div>
-      );
-    } else if (choice === PenaltyType.SEND_BUDDY) {
-      if (buddy && buddy !== "0x0000000000000000000000000000000000000000") {
-        return `Sen${status == TaskStatus.Expired ? "t" : "d"} to ${buddy}`;
-      } else {
-        return "Send to buddy (address not set)";
-      }
+const renderPenaltyInfo = () => {
+  if (choice === PenaltyType.DELAY_PAYMENT) {
+    // Convert seconds back to hours first
+    const delayHours = Number(delayDuration) / 3600;
+    
+    // Calculate days and remaining hours
+    const days = Math.floor(delayHours / 24);
+    const hours = delayHours % 24;
+    
+    // Format the display text
+    let delayText = "";
+    if (days > 0 && hours > 0) {
+      delayText = `${days} day${days > 1 ? 's' : ''} ${hours} hour${hours > 1 ? 's' : ''}`;
+    } else if (days > 0) {
+      delayText = `${days} day${days > 1 ? 's' : ''}`;
+    } else {
+      delayText = `${hours} hour${hours > 1 ? 's' : ''}`;
     }
-    return "No penalty set";
-  };
+    
+    return (
+      <div className='flex flex-col gap-1'>
+        <span>Delay payment by {delayText}</span>
+      </div>
+    );
+  } else if (choice === PenaltyType.SEND_BUDDY) {
+    if (buddy && buddy !== "0x0000000000000000000000000000000000000000") {
+      return `Sen${status == TaskStatus.Expired ? "t" : "d"} to ${buddy}`;
+    } else {
+      return "Send to buddy (address not set)";
+    }
+  }
+  return "No penalty set";
+};
 
   const completeButtonText = getCompleteButtonState();
   const cancelButtonText = getCancelButtonState();

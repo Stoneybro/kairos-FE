@@ -262,7 +262,7 @@ async function createTask() {
           ? (buddyAddress as `0x${string}`)
           : "0x0000000000000000000000000000000000000000",
         penaltyType === PenaltyType.DELAY_PAYMENT
-          ? BigInt(parseInt(delayDuration) * 86400)
+          ? BigInt(parseInt(delayDuration) * 3600)
           : BigInt(0),
       ],
     });
@@ -480,7 +480,7 @@ useEffect(() => {
     commitedFundsrefetch();
     setCreateTaskButton("Task Created");
     setLocalSuccess(true);
-    toast.success("Task Created");
+    toast.success("Task Created successfully");
   }
 }, [isCreateTaskSuccess]);
 

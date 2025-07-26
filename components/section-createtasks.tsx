@@ -204,7 +204,6 @@ useEffect(() => {
       setLocalSuccess(false);
     }, 1000);
     
-    toast.success("Task Created Successfully");
   }
 }, [localSuccess]);
 
