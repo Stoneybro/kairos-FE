@@ -35,6 +35,7 @@ import { Button } from "./ui/button";
 import { SlNote } from "react-icons/sl";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { toast } from "sonner";
+import { formatEther } from "viem";
 
 const TaskCreation = () => {
   /*//////////////////////////////////////////////////////////////*/
@@ -44,6 +45,8 @@ const TaskCreation = () => {
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [selectedTime, setSelectedTime] = useState("10:30");
   const [isClient, setIsClient] = useState(false);
+  const [delayDays, setDelayDays] = useState("");
+  const [delayHours, setDelayHours] = useState("");
   const isDesktop = useMediaQuery("(min-width: 768px)");
   
   /*//////////////////////////////////////////////////////////////*/
@@ -68,14 +71,15 @@ const TaskCreation = () => {
     setPenaltyType,
     createTask,
     isDisabled,
-    localSuccess
+    localSuccess,
+    availableBalance
   } = useDashboard();
 
   // Client-side only effect
   useEffect(() => {
     setIsClient(true);
   }, []);
-
+const balance=String(formatEther(availableBalance))
   /*//////////////////////////////////////////////////////////////*/
   //                           FUNCTIONS
   /*//////////////////////////////////////////////////////////////*/
@@ -126,21 +130,17 @@ const TaskCreation = () => {
         setDeadline(combined);
       }
     } else if (timeString === '') {
-      // Handle empty string case - reset to default
       setSelectedTime('10:30');
       if (deadline) {
         const combined = combineDateTime(deadline, '10:30');
         setDeadline(combined);
       }
     }
-    // For partial inputs during typing, just update the selectedTime
-    // but don't crash if it's not a complete time
     if (timeString.length <= 5) {
       setSelectedTime(timeString);
     }
   };
 
-  // Format time for display (ensure it's always HH:MM format)
   const formatTimeForInput = (time: string) => {
     if (!time || typeof time !== 'string') return '10:30';
     
@@ -152,6 +152,36 @@ const TaskCreation = () => {
     
     return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
   };
+  const handleDelayDaysChange = (value: string) => {
+    if (/^\d*$/.test(value)) {
+      setDelayDays(value);
+      updateDelayDuration(value, delayHours);
+    }
+  };
+
+  const handleDelayHoursChange = (value: string) => {
+    if (/^\d*$/.test(value)) {
+      setDelayHours(value);
+      updateDelayDuration(delayDays, value);
+    }
+  };
+
+  const updateDelayDuration = (days: string, hours: string) => {
+    const daysNum = parseInt(days || "0", 10);
+    const hoursNum = parseInt(hours || "0", 10);
+    const totalHours = (daysNum * 24) + hoursNum;
+    setDelayDuration(totalHours.toString());
+  };
+
+  // Validation for delay duration
+  const isDelayDurationValid = () => {
+    const daysNum = parseInt(delayDays || "0", 10);
+    const hoursNum = parseInt(delayHours || "0", 10);
+    const totalHours = (daysNum * 24) + hoursNum;
+    
+    // Must have at least 1 hour and no more than 30 days (720 hours)
+    return totalHours >= 1 && totalHours <= 720 && daysNum <= 30 && hoursNum <= 23;
+  };
 
   useEffect(() => {
     if (createTaskButton == "Creating Task" && localSuccess) {
@@ -160,6 +190,8 @@ const TaskCreation = () => {
       setRewardAmount("");
       setDeadline(undefined);
       setDelayDuration("");
+      setDelayDays("");
+      setDelayHours("");
       setBuddyAddress("");
       setPenaltyType(PenaltyType.UNDEFINED);
       setSelectedTime("10:30"); // Reset time as well
@@ -214,9 +246,9 @@ const TaskCreation = () => {
   );
 
   const createTaskForm = (
-    <div className='grid gap-4 px-4 lg:px-0'>
+    <div className='grid gap-3 px-4 pb-4 lg:pb-0 lg:px-0'>
       {/* Task description */}
-      <div className='grid gap-3'>
+      <div className='grid gap-2'>
         <label htmlFor='TaskDescription'> Task Description</label>
         <Input
           id='TaskDescription'
@@ -234,7 +266,7 @@ const TaskCreation = () => {
       </div>
       
       {/* Reward Amount */}
-      <div className='grid gap-3 w-full'>
+      <div className='grid gap-2 w-full'>
         <label htmlFor='RewardAmount'>Reward Amount (ETH)</label>
         <Input
           id='RewardAmount'
@@ -243,32 +275,32 @@ const TaskCreation = () => {
           step='0.01'
           value={rewardAmount}
           onChange={(e) => setRewardAmount(e.target.value)}
-          placeholder='0.01'
+          placeholder={`Available balance: ${balance} ETH`}
           required
           className='w-full'
         />
         {rewardAmount &&
           (!/^\d*\.?\d{0,18}$/.test(rewardAmount) ||
-            parseFloat(rewardAmount) <= 0) && (
-            <p className='text-destructive text-sm -mt-3'>
+            parseFloat(rewardAmount) <= 0 || rewardAmount > balance) && (
+            <p className='text-destructive text-[10px] -mt-3'>
               Enter a valid amount.
             </p>
           )}
       </div>
 
       {/* Deadline with Date and Time */}
-      <div className='grid gap-3'>
+      <div className='grid gap-2'>
         <label htmlFor='deadline'>Deadline</label>
         {deadlineJsx}
         {deadline && deadline.getTime() <= Date.now() && (
-          <p className='text-destructive text-sm -mt-3'>
+          <p className='text-destructive text-[10px] -mt-3'>
             Deadline must be in the future.
           </p>
         )}
       </div>
       
       {/* Penalty Type */}
-      <div className='grid gap-3'>
+      <div className='grid gap-2'>
         <label htmlFor='penaltyType' className='text-sm font-medium'>
           Penalty Type
         </label>
@@ -329,32 +361,50 @@ const TaskCreation = () => {
         {penaltyType === PenaltyType.DELAY_PAYMENT && (
           <div>
             <label className='block text-sm font-medium text-gray-300 mb-2'>
-              Delay Duration (days)
+              Delay Duration
             </label>
-            <Input
-              type='number'
-              value={delayDuration}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (/^\d*$/.test(v)) {
-                  setDelayDuration(v);
-                }
-              }}
-              onPaste={(e) => {
-                if (!/^\d+$/.test(e.clipboardData.getData("text"))) {
-                  e.preventDefault();
-                }
-              }}
-              placeholder='30'
-              className='w-full bg-[#1A1A1B] border-[#2A2A2A] border rounded-lg px-4 py-3 text-white'
-            />
-            {delayDuration &&
-              (parseInt(delayDuration, 10) < 1 ||
-                parseInt(delayDuration, 10) > 30) && (
-                <p className='text-destructive text-sm '>
-                  Enter a valid delay duration (1–30 days).
-                </p>
-              )}
+            <div className='flex gap-3'>
+              <div className='flex-1'>
+                <Input
+                  type='number'
+                  value={delayDays}
+                  onChange={(e) => handleDelayDaysChange(e.target.value)}
+                  onPaste={(e) => {
+                    if (!/^\d+$/.test(e.clipboardData.getData("text"))) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder='days'
+                  min='0'
+                  max='30'
+                  className='w-full bg-[#1A1A1B] border-[#2A2A2A] border rounded-lg px-4 py-3 text-white'
+                />
+                
+              </div>
+              <div className='flex-1'>
+                <Input
+                  type='number'
+                  value={delayHours}
+                  onChange={(e) => handleDelayHoursChange(e.target.value)}
+                  onPaste={(e) => {
+                    if (!/^\d+$/.test(e.clipboardData.getData("text"))) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder='hours'
+                  min='0'
+                  max='23'
+                  className='w-full bg-[#1A1A1B] border-[#2A2A2A] border rounded-lg px-4 py-3 text-white'
+                />
+               
+              </div>
+            </div>
+            {(delayDays || delayHours) && !isDelayDurationValid() && (
+              <p className='text-destructive text-xs mt-2'>
+             delay duration minimum 1 hour, maximum 30 days.
+              </p>
+            )}
+          
           </div>
         )}
 
@@ -445,7 +495,7 @@ const TaskCreation = () => {
               variant={"default"}
               disabled={isDisabled}
               onClick={createTask}
-              className='w-full flex justify-center items-center mb-8 mt-4'
+              className='w-full flex justify-center items-center '
             >
               {createTaskButton === "Creating Task" && (
                 <Loader2 className='mr-2 h-4 w-4 animate-spin' />

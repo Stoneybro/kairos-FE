@@ -7,6 +7,7 @@ import { useDeploySmartAccount } from "./hooks/useDeploySmartAccount";
 import { GalleryVerticalEnd, Loader2, CircleCheckBig } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoginForm } from "@/components/login-form";
+import { useDashboard } from "./hooks/useDashboard";
 /*//////////////////////////////////////////////////////////////
                                 TYPES
 //////////////////////////////////////////////////////////////*/
@@ -34,7 +35,7 @@ export default function Home() {
     setDebug,
     authenticated,
   } = useDeploySmartAccount();
-
+  const { copyToClipboard} = useDashboard();
   /*//////////////////////////////////////////////////////////////
                             FUNCTIONS
 //////////////////////////////////////////////////////////////*/
@@ -76,6 +77,9 @@ export default function Home() {
                 <LoginForm />
               ) : (
                 <div className='bg-background min-h-[90vh] flex flex-col items-center justify-center  relative'>
+                  <Button   onClick={() =>
+                      copyToClipboard(address as string)
+                    } variant={"outline"}>{address} </Button>
                   <div className='bg-background flex flex-col justify-center items-center gap-8 text-center'>
                     <div className=' text-4xl'>Create Your Kairos Wallet</div>
                     <div className=''>
@@ -110,6 +114,7 @@ export default function Home() {
                       )}
                       {getLabel()}
                     </button>
+                    {deploymentState.accountStep === "created" && <Button onClick={() => router.push("/dashboard")} variant={"secondary"}>go to dashboard</Button>}
 
                     {deploymentState.accountStep === "created" && (
                       <div className="">
