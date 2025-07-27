@@ -112,6 +112,7 @@ const WalletSidebarDeposit = () => {
         )}
         {depositButton}
       </Button>
+      <div className="text-xs text-gray-400 self-center"> balance may take a few seconds to load. if it doesnt load after a few seconds, refresh the page</div>
     </div>
   );
 };
