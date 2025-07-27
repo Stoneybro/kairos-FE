@@ -34,6 +34,7 @@ export function WalletSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
         {activeTab === "send" && <WalletSidebarSend  />}
     
     </div>
+    
     <div className="w-full h-[10%] "><SidebarFooter setTab={setActiveTab} /></div>
     </div>
   </Sidebar>

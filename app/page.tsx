@@ -77,14 +77,14 @@ export default function Home() {
               <LoginForm />
             ) : (
               <div className='bg-background flex flex-col justify-center items-center gap-8 text-center'>
-                <div className='text-4xl'>Activate Your Kairos Wallet</div>
+                <div className='text-4xl'>Activate Your Kairos Wallet (Demo)</div>
                 <div>
                   This is a secure smart wallet, unique to you, where your
                   locked funds are held safely while you work on your tasks.
                 </div>
                 <div>
                   Activating your wallet is a blockchain transaction and will
-                  require a small gas fee.
+                  require a small gas fee. New testers Can obtain funds for testing by clicking the button below.
                 </div>
 
                 {getFundingLabel() ==="wallet not funded"?<Button onClick={()=>fundWalletOp()}>Fund wallet</Button>:(getFundingLabel() === "error:refresh"?<Button onClick={()=>checkWalletStatus()}>Error: Refresh</Button>:<Button variant='outline'>{getFundingLabel()}</Button>)}
@@ -115,7 +115,7 @@ export default function Home() {
                 </button>
 
                 {/* Post-Activation Wallet Funding */}
-                {deploymentState.accountStep === "created" && (
+                {deploymentState.accountStep === "created" && fundingStatus=="funded" && (
                   <div>
                    
                       <Button

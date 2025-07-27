@@ -231,13 +231,13 @@ export function useDeploySmartAccount() {
     }
  
       async function checkWalletStatus() {
-        
+        setFundingStatus("checking")
       try {
         const statusData= await walletStatus();
         if (statusData) {
           const { response, result } = statusData;
           if (response.ok) {
-            if (result.success==true) {
+            if (result.funded==true) {
               setFundingStatus("funded")
             }else{
               setFundingStatus("not funded")
