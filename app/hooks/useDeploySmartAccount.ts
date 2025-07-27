@@ -12,13 +12,17 @@ import {
 } from "../lib/contracts";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAddressStore } from "../lib/store/addressStore";
 import { DeploymentState } from "../types/types";
 import { toast } from "sonner";
+import { useWalletAutoFunder } from "@/components/autoFund";
+import { set } from "lodash";
+
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
 /*************************************************************************/
+type FundingStatus =  "checking" | "funding" | "funded" | "error" | "not funded";
 
 export function useDeploySmartAccount() {
   /*************************************************************************/
@@ -28,7 +32,8 @@ export function useDeploySmartAccount() {
     accountStep: "idle",
     accountError: undefined,
   });
-  const [debug, setDebug] = useState(false);
+  const [fundingStatus, setFundingStatus] = useState<FundingStatus>("checking");
+
   /*************************************************************************/
   /** 🪝 WAGMI / OTHER HOOKS **********************************************/
   /*************************************************************************/
@@ -42,8 +47,10 @@ export function useDeploySmartAccount() {
     linkWallet,
   } = usePrivy();
 
+  const { fundWallet, walletStatus, walletAddress } = useWalletAutoFunder();
+
   const router = useRouter();
-  const { address, isConnected, } = useAccount();
+  const { address, isConnected } = useAccount();
 
   const {
     data: createAccountHash,
@@ -99,6 +106,10 @@ export function useDeploySmartAccount() {
   );
 
   /*************************************************************************/
+  /** 💰 FUNDING LOGIC ****************************************************/
+  /*************************************************************************/
+
+  /*************************************************************************/
   /** 🚀 ACTION METHODS ***************************************************/
   /*************************************************************************/
   async function createAccount() {
@@ -109,7 +120,7 @@ export function useDeploySmartAccount() {
         accountStep: "error",
         accountError: "WALLET NOT CONNECTED",
       }));
-      toast.error("WALLET NOT CONNECTED")
+      toast.error("WALLET NOT CONNECTED");
       console.log("ERROR:WALLET NOT CONNECTED");
       return;
     }
@@ -119,7 +130,7 @@ export function useDeploySmartAccount() {
         accountStep: "error",
         accountError: "ACCOUNT FACTORY NOT FOUND OR INVALID",
       }));
-       toast.error("ACCOUNT FACTORY NOT FOUND OR INVALID")
+      toast.error("ACCOUNT FACTORY NOT FOUND OR INVALID");
       console.log("ERROR:ACCOUNT FACTORY NOT FOUND OR INVALID");
       return;
     }
@@ -134,7 +145,11 @@ export function useDeploySmartAccount() {
       });
     } catch (error) {
       console.log(error);
-      toast.error(`ACCOUNT CREATION FAILED: ${error instanceof Error ? error.message : "unknown error"}`);
+      toast.error(
+        `ACCOUNT CREATION FAILED: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`
+      );
       setDeploymentState((prev) => ({
         ...prev,
         accountStep: "error",
@@ -144,23 +159,27 @@ export function useDeploySmartAccount() {
       }));
     }
   }
+
   const resetAccount = () => {
     setDeploymentState((prev) => ({
       ...prev,
       accountStep: "idle",
       accountError: undefined,
     }));
+    setFundingStatus("checking");
   };
+
+  const isSmartAccount =
+    smartAccount &&
+    smartAccount !== "0x0000000000000000000000000000000000000000";
 
   /*************************************************************************/
   /** 📡 SIDE EFFECTS *****************************************************/
   /*************************************************************************/
-  useEffect(() => {
-    const hasSmartAccount =
-      smartAccount &&
-      smartAccount !== "0x0000000000000000000000000000000000000000";
 
-    if (isAccountTxSuccess || hasSmartAccount) {
+  // Handle smart account creation success
+  useEffect(() => {
+    if (isAccountTxSuccess || isSmartAccount) {
       setDeploymentState((prev) => ({
         ...prev,
         accountStep: "created",
@@ -177,6 +196,7 @@ export function useDeploySmartAccount() {
     }
   }, [isAccountTxSuccess, smartAccount]);
 
+  // Handle smart account creation errors
   useEffect(() => {
     if (isAccountTxError || createAccountError) {
       setDeploymentState((prev) => ({
@@ -187,23 +207,91 @@ export function useDeploySmartAccount() {
     }
   }, [createAccountError, isAccountTxError]);
 
+    async function fundWalletOp() {
+      try {
+        const statusData= await fundWallet();
+        if (statusData) {
+          const { response, result } = statusData;
+          if (response.ok) {
+            if (result.success==true) {
+              setFundingStatus("funded")
+            }else{
+              setFundingStatus("error")
+            }
+          }else{
+          setFundingStatus("error");
+        }
+        }else{
+          setFundingStatus("error");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred while checking wallet status.");
+        setFundingStatus("error")
+      }
+    }
+ 
+      async function checkWalletStatus() {
+        
+      try {
+        const statusData= await walletStatus();
+        if (statusData) {
+          const { response, result } = statusData;
+          if (response.ok) {
+            if (result.success==true) {
+              setFundingStatus("funded")
+            }else{
+              setFundingStatus("not funded")
+            }
+          }else{
+          setFundingStatus("error");
+        }
+        }else{
+          setFundingStatus("error");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred while checking wallet status.");
+        setFundingStatus("error")
+      }
+    }
+  useEffect(() => {
+    if (ready && authenticated && walletAddress){
+      checkWalletStatus()
+    }
+  }, [ready, authenticated, walletAddress]);
+
   /*************************************************************************/
   /** 🎯 RETURN API *******************************************************/
   /*************************************************************************/
   return {
+    // Smart Account Data
     smartAccount,
     taskManager,
     factoryOwner,
     deploymentState,
+
+    // Wallet Connection
     isConnected,
+    address,
+    walletAddress,
+
+    // Actions
     createAccount,
-    debug,
-    setDebug,
-    login,
+    resetAccount,
     connectWallet,
     logout,
+
+    // Privy Auth
     ready,
     user,
     authenticated,
+
+    // // Funding Status
+    fundingStatus,
+    fundWalletOp,
+    checkWalletStatus
+
+
+    // // Manual Actions
+    // fundWallet: handleWalletFunding,
   };
 }

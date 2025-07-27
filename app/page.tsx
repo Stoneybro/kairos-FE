@@ -4,135 +4,137 @@ import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { useEffect } from "react";
 import { useDeploySmartAccount } from "./hooks/useDeploySmartAccount";
-import { GalleryVerticalEnd, Loader2, CircleCheckBig } from "lucide-react";
+import {
+  GalleryVerticalEnd,
+  Loader2,
+  CircleCheckBig,
+  Wallet,
+  Copy,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoginForm } from "@/components/login-form";
 import { useDashboard } from "./hooks/useDashboard";
-/*//////////////////////////////////////////////////////////////
-                                TYPES
-//////////////////////////////////////////////////////////////*/
+import { useWalletAutoFunder } from "@/components/autoFund";
 
 export default function Home() {
-  /*//////////////////////////////////////////////////////////////
-                                STATES
-//////////////////////////////////////////////////////////////*/
-
-  /*//////////////////////////////////////////////////////////////
-                           HOOKS
-//////////////////////////////////////////////////////////////*/
   const router = useRouter();
   const { isConnected, address } = useAccount();
-  /*//////////////////////////////////////////////////////////////
-                            CUSTOM HOOKS
-//////////////////////////////////////////////////////////////*/
-  const {
-    smartAccount,
-    taskManager,
-    factoryOwner,
-    deploymentState,
-    createAccount,
-    debug,
-    setDebug,
-    authenticated,
-  } = useDeploySmartAccount();
-  const { copyToClipboard} = useDashboard();
-  /*//////////////////////////////////////////////////////////////
-                            FUNCTIONS
-//////////////////////////////////////////////////////////////*/
+  const { smartAccount, deploymentState, createAccount, authenticated, fundingStatus,fundWalletOp,checkWalletStatus } =
+    useDeploySmartAccount();
+  const { copyToClipboard } = useDashboard();
 
   const getLabel = () => {
     switch (deploymentState.accountStep) {
       case "creating":
-        return "CREATING WALLET";
+        return "ACTIVATING WALLET";
       case "created":
-        return "WALLET CREATED";
+        return "WALLET ACTIVE";
       default:
-        return "CREATE WALLET";
+        return "ACTIVATE WALLET";
     }
   };
-  // useEffect(() => {
-  //   if (authenticated && smartAccount && taskManager) {
-  //       router.push("/dashboard");
-  //   }
-  // }, [authenticated, smartAccount, taskManager]);
 
-  /*//////////////////////////////////////////////////////////////
-                            JSX
-//////////////////////////////////////////////////////////////*/
+  const getFundingLabel = () => {
+    switch (fundingStatus) {
+      case "funding":
+        return "Funding wallet";
+      case "funded":
+        return "Wallet funded";
+      case "error":
+        return "error:refresh";
+      case "not funded":
+        return "wallet not funded"
+      default:
+        return "Checking wallet balance...";
+    }
+  };
+
   return (
-    <>
-      <div className='grid min-h-svh lg:grid-cols-2'>
-        <div className='flex flex-col gap-4 p-6 md:p-10'>
-          <div className='flex justify-center gap-2 md:justify-start'>
-            <a href='#' className='flex items-center gap-2 font-medium'>
-              <div className='bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md'>
-                <GalleryVerticalEnd className='size-4' />
-              </div>
-              Kairos
-            </a>
-          </div>
-          <div className='flex  items-center justify-center'>
-            <div className='w-full max-w-sm'>
-              {!authenticated ? (
-                <LoginForm />
-              ) : (
-                <div className='bg-background min-h-[90vh] flex flex-col items-center justify-center  relative'>
-                  <Button   onClick={() =>
-                      copyToClipboard(address as string)
-                    } variant={"outline"}>{address} </Button>
-                  <div className='bg-background flex flex-col justify-center items-center gap-8 text-center'>
-                    <div className=' text-4xl'>Create Your Kairos Wallet</div>
-                    <div className=''>
-                      This is a secure smart wallet, unique to you, where your
-                      locked funds are held safely while you work on your tasks.
-                    </div>
-                    <div className=''>
-                      Creating your wallet is a blockchain transaction and will
-                      require a small gas fee.
-                    </div>
-                    <Button variant={"link"}>click here to get some</Button>
-                    <button
-                      disabled={
-                        !isConnected ||
-                        deploymentState.accountStep === "creating" ||
-                        deploymentState.accountStep === "created"
-                      }
-                      className={`bg-white px-5 py-2 text-black rounded flex items-center justify-center ${
-                        !isConnected ||
-                        deploymentState.accountStep === "creating" ||
-                        deploymentState.accountStep === "created"
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer"
-                      }`}
-                      onClick={createAccount}
-                    >
-                      {deploymentState.accountStep === "creating" && (
-                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      )}
-                      {deploymentState.accountStep === "created" && (
-                        <CircleCheckBig className='mr-2 h-4 w-4' />
-                      )}
-                      {getLabel()}
-                    </button>
-                    {deploymentState.accountStep === "created" && <Button onClick={() => router.push("/dashboard")} variant={"secondary"}>go to dashboard</Button>}
+    <div className='grid min-h-svh lg:grid-cols-2'>
+      <div className='flex flex-col gap-4 p-6 md:p-10'>
+        {/* Header */}
+        <div className='flex items-center justify-between'>
+          <a href='#' className='flex font-bold text-lg'>
+            Kairos
+          </a>
+          {address && (
+            <Button
+              onClick={() => copyToClipboard(address)}
+              variant='outline'
+              className='flex items-center gap-2'
+            >
+              <Wallet className='h-4 w-4' />
+              {address.slice(0, 6)}...{address.slice(-4)}
+              <Copy className='h-4 w-4 ml-2' />
+            </Button>
+          )}
+        </div>
 
-                    {deploymentState.accountStep === "created" && (
-                      <div className="">
-                          <div className='text-sm text-gray-400'>
-                        Your Kairos wallet Address: [ {smartAccount} ]
-                      </div>
-                      
-                      </div>
-                    
-                    )}
-                  </div>
+        {/* Body */}
+        <div className='flex my-auto items-center justify-center'>
+          <div className='w-full max-w-sm'>
+            {!authenticated ? (
+              <LoginForm />
+            ) : (
+              <div className='bg-background flex flex-col justify-center items-center gap-8 text-center'>
+                <div className='text-4xl'>Activate Your Kairos Wallet</div>
+                <div>
+                  This is a secure smart wallet, unique to you, where your
+                  locked funds are held safely while you work on your tasks.
                 </div>
-              )}
-            </div>
+                <div>
+                  Activating your wallet is a blockchain transaction and will
+                  require a small gas fee.
+                </div>
+
+                {getFundingLabel() ==="wallet not funded"?<Button onClick={()=>fundWalletOp()}>Fund wallet</Button>:(getFundingLabel() === "error:refresh"?<Button onClick={()=>checkWalletStatus()}>Error: Refresh</Button>:<Button variant='outline'>{getFundingLabel()}</Button>)}
+
+                {/* Wallet Activation Button */}
+                <button
+                  disabled={
+                    !isConnected ||
+                    deploymentState.accountStep === "creating" ||
+                    deploymentState.accountStep === "created"
+                  }
+                  className={`bg-white px-5 py-2 text-black rounded flex items-center justify-center ${
+                    !isConnected ||
+                    deploymentState.accountStep === "creating" ||
+                    deploymentState.accountStep === "created"
+                      ? "opacity-50 cursor-not-allowed"
+                      : "cursor-pointer"
+                  }`}
+                  onClick={createAccount}
+                >
+                  {deploymentState.accountStep === "creating" && (
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  )}
+                  {deploymentState.accountStep === "created" && (
+                    <CircleCheckBig className='mr-2 h-4 w-4' />
+                  )}
+                  {getLabel()}
+                </button>
+
+                {/* Post-Activation Wallet Funding */}
+                {deploymentState.accountStep === "created" && (
+                  <div>
+                   
+                      <Button
+                        onClick={() => router.push("/dashboard")}
+                        variant='outline'
+                      >
+                        Go to dashboard
+                      </Button>
+                    
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        <div className='bg-muted relative hidden lg:block'></div>
       </div>
-    </>
+
+      {/* Right Panel */}
+      <div className='bg-muted relative hidden lg:block'></div>
+    </div>
   );
 }
