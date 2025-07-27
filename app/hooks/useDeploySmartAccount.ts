@@ -208,6 +208,7 @@ export function useDeploySmartAccount() {
   }, [createAccountError, isAccountTxError]);
 
     async function fundWalletOp() {
+      setFundingStatus("funding")
       try {
         const statusData= await fundWallet();
         if (statusData) {
