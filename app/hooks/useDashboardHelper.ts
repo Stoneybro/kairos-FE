@@ -100,7 +100,7 @@ const isDisabled =
   (penaltyType === PenaltyType.DELAY_PAYMENT &&
     (!/^\d+$/.test(delayDuration) ||
       parseInt(delayDuration) <= 0 ||
-      parseInt(delayDuration) > 720)) || // Changed from 30 to 720 (30 days * 24 hours)
+      parseInt(delayDuration) > 30)) ||
   (penaltyType === PenaltyType.SEND_BUDDY &&
     !/^0x[a-fA-F0-9]{40}$/.test(buddyAddress)) ||
   createTaskButton == "Creating Task" ||

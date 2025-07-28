@@ -186,16 +186,7 @@ const TaskCard = ({
     return deadlineDate.toLocaleDateString("en-US", options);
   };
 
-  const handleCompleteTask = () => {
-    completeTask(id);
-  };
 
-  const handleCancelTask = () => {
-    cancelTask(id);
-  };
-  const handleReleasePayment = () => {
-    releasePayment(id);
-  };
 
 const renderPenaltyInfo = () => {
   if (choice === PenaltyType.DELAY_PAYMENT) {
@@ -339,7 +330,7 @@ const renderPenaltyInfo = () => {
             {getStatusText(TaskStatus[status]) === "Active" && (
               <div className='flex gap-3 pt-2'>
                 <Button
-                  onClick={handleCompleteTask}
+                  onClick={()=>completeTask(id)}
                   variant={"default"}
                   disabled={isCompleting || isCanceling}
                 >
@@ -347,7 +338,7 @@ const renderPenaltyInfo = () => {
                   {completeButtonText} Task
                 </Button>
                 <Button
-                  onClick={handleCancelTask}
+                  onClick={()=>cancelTask(id)}
                   variant={"destructive"}
                   disabled={isCompleting || isCanceling}
                 >
@@ -359,7 +350,7 @@ const renderPenaltyInfo = () => {
             {getStatusText(TaskStatus[status]) === "Expired" &&
               choice === PenaltyType.DELAY_PAYMENT && (
                 <Button
-                  onClick={handleReleasePayment}
+                  onClick={()=>releasePayment(id)}
                   variant={"secondary"}
                   disabled={isReleasing || !isDelayPeriodElapsed()}
                 >
