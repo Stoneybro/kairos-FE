@@ -22,7 +22,7 @@ import { set } from "lodash";
 /*************************************************************************/
 /** 🧩 TYPES *************************************************************/
 /*************************************************************************/
-type FundingStatus =  "checking" | "funding" | "funded" | "error" | "not funded";
+type FundingStatus = "checking" | "funding" | "funded" | "error" | "not funded";
 
 export function useDeploySmartAccount() {
   /*************************************************************************/
@@ -186,10 +186,31 @@ export function useDeploySmartAccount() {
       }));
 
       async function refetchData() {
-        const { data: smartAccountData } = await smartAccountRefetch();
-        const { data: taskManagerData } = await taskManagerRefetch();
-        setAccountAddress(smartAccountData as `0x${string}`);
-        setTaskManagerAddress(taskManagerData as `0x${string}`);
+        try {
+          const { data: smartAccountData } = await smartAccountRefetch();
+          const { data: taskManagerData } = await taskManagerRefetch();
+
+          console.log("Refetch results:", {
+            smartAccountData,
+            taskManagerData,
+          });
+
+          // Only set if we have valid data
+          if (
+            smartAccountData &&
+            smartAccountData !== "0x0000000000000000000000000000000000000000"
+          ) {
+            setAccountAddress(smartAccountData as `0x${string}`);
+          }
+          if (
+            taskManagerData &&
+            taskManagerData !== "0x0000000000000000000000000000000000000000"
+          ) {
+            setTaskManagerAddress(taskManagerData as `0x${string}`);
+          }
+        } catch (error) {
+          console.error("Failed to refetch data:", error);
+        }
       }
 
       refetchData();
@@ -207,56 +228,56 @@ export function useDeploySmartAccount() {
     }
   }, [createAccountError, isAccountTxError]);
 
-    async function fundWalletOp() {
-      setFundingStatus("funding")
-      try {
-        const statusData= await fundWallet();
-        if (statusData) {
-          const { response, result } = statusData;
-          if (response.ok) {
-            if (result.success==true) {
-              setFundingStatus("funded")
-            }else{
-              setFundingStatus("error")
-            }
-          }else{
+  async function fundWalletOp() {
+    setFundingStatus("funding");
+    try {
+      const statusData = await fundWallet();
+      if (statusData) {
+        const { response, result } = statusData;
+        if (response.ok) {
+          if (result.success == true) {
+            setFundingStatus("funded");
+          } else {
+            setFundingStatus("error");
+          }
+        } else {
           setFundingStatus("error");
         }
-        }else{
-          setFundingStatus("error");
-        }
-      } catch (error) {
-        toast.error("An unexpected error occurred while checking wallet status.");
-        setFundingStatus("error")
+      } else {
+        setFundingStatus("error");
       }
+    } catch (error) {
+      toast.error("An unexpected error occurred while checking wallet status.");
+      setFundingStatus("error");
     }
- 
-      async function checkWalletStatus() {
-        setFundingStatus("checking")
-      try {
-        const statusData= await walletStatus();
-        if (statusData) {
-          const { response, result } = statusData;
-          if (response.ok) {
-            if (result.funded==true) {
-              setFundingStatus("funded")
-            }else{
-              setFundingStatus("not funded")
-            }
-          }else{
+  }
+
+  async function checkWalletStatus() {
+    setFundingStatus("checking");
+    try {
+      const statusData = await walletStatus();
+      if (statusData) {
+        const { response, result } = statusData;
+        if (response.ok) {
+          if (result.funded == true) {
+            setFundingStatus("funded");
+          } else {
+            setFundingStatus("not funded");
+          }
+        } else {
           setFundingStatus("error");
         }
-        }else{
-          setFundingStatus("error");
-        }
-      } catch (error) {
-        toast.error("An unexpected error occurred while checking wallet status.");
-        setFundingStatus("error")
+      } else {
+        setFundingStatus("error");
       }
+    } catch (error) {
+      toast.error("An unexpected error occurred while checking wallet status.");
+      setFundingStatus("error");
     }
+  }
   useEffect(() => {
-    if (ready && authenticated && walletAddress){
-      checkWalletStatus()
+    if (ready && authenticated && walletAddress) {
+      checkWalletStatus();
     }
   }, [ready, authenticated, walletAddress]);
 
@@ -289,8 +310,7 @@ export function useDeploySmartAccount() {
     // // Funding Status
     fundingStatus,
     fundWalletOp,
-    checkWalletStatus
-
+    checkWalletStatus,
 
     // // Manual Actions
     // fundWallet: handleWalletFunding,
