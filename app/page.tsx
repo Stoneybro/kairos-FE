@@ -41,7 +41,7 @@ export default function Home() {
       case "funded":
         return "Wallet funded";
       case "error":
-        return "error:refresh";
+        return "error:retry";
       case "not funded":
         return "wallet not funded"
       default:
@@ -87,7 +87,7 @@ export default function Home() {
                   require a small gas fee. New testers Can obtain funds for testing by clicking the button below.
                 </div>
 
-                {getFundingLabel() ==="wallet not funded"?<Button onClick={()=>fundWalletOp()}>Fund wallet</Button>:(getFundingLabel() === "error:refresh"?<Button onClick={()=>checkWalletStatus()}>Error: Refresh</Button>:<Button variant='outline'>{getFundingLabel()}</Button>)}
+                {getFundingLabel() ==="wallet not funded"?<Button onClick={()=>fundWalletOp()}>Fund wallet</Button>:(getFundingLabel() === "error:retry"?<Button onClick={()=>checkWalletStatus()}>Error: Refresh</Button>:<Button variant='outline'>{getFundingLabel()}</Button>)}
 
                 {/* Wallet Activation Button */}
                 <button
