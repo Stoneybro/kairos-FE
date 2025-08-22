@@ -20,6 +20,14 @@ KAIROS introduces **skin in the game**, ensuring goals are backed by tangible co
 
 ---
 
+### Demo Video
+
+
+https://github.com/user-attachments/assets/4c2f3a7a-64c4-4afa-b124-19e30e442bd0
+
+
+
+
 ## Features  
 - **Task Wallets** – Personal smart wallets for locking funds against goals.  
 - **Accountability Partners** – Redirect uncompleted task funds to a trusted person.  
@@ -39,20 +47,32 @@ KAIROS is more than a task manager — it’s a **system of accountability** des
 ---
 
 ## Current Status  
-✅ **Working Now**  
-- Task staking  
-- Penalty logic  
-- Wallet deployment  
+Originally, I planned to integrate the full Account Abstraction stack (bundlers + paymasters), but I ran into setup issues. To keep momentum, I hacked around it:  
+- Interacted with the custom ERC-4337 wallet directly  
+- Funded wallets manually through the faucet  
+- Built the full task + penalty flow on top  
 
-🛠️ **Planned**  
-- Full AA gasless flow  
-- UX polish  
+This means AA sponsorship mode is still in progress, but most of the core system is already working.  
+
+---
+
+### What’s Working Now  
+
+✅ Smart wallet deployment  
+✅ Wallet dashboard  
+✅ Task creation + staking  
+✅ Penalty triggers (Chainlink Automation)  
+✅ Accountability buddy logic  
+✅ Auto-funded wallets with social login  
+
 
 ---
 
 
 
 ---
+
+
 
 ## Contracts  
 custom account factory: https://sepolia.basescan.org/address/0x5D16F29E70e90ac48C7F4fb2c1145911a774eFbF
