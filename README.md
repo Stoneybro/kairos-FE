@@ -54,8 +54,10 @@ KAIROS is more than a task manager — it’s a **system of accountability** des
 
 ---
 
-## Contracts (to add)  
+## Contracts  
 custom account factory: https://sepolia.basescan.org/address/0x5D16F29E70e90ac48C7F4fb2c1145911a774eFbF
+
+
 task-manager: https://sepolia.basescan.org/address/0x43e0bc90661daf20c6ffbae1079d6e07e88e403a
 
 ---
