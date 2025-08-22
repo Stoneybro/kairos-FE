@@ -10,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Kairos V2.0",
+  title: "Kairos V1.0",
   description: "Accountability, Onchain",
 };
 
