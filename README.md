@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KAIROS – A discipline & accountability platform powered by smart accounts  
 
-## Getting Started
+## Overview  
+**KAIROS** is an accountability and discipline platform built on programmable smart wallets powered by **Account Abstraction**.  
 
-First, run the development server:
+The core idea is simple: **users collateralize their goals with their own money.**  
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- When a user creates a task, they lock funds into a smart wallet.  
+- If the task is completed, the funds are returned.  
+- If the task is not completed, the funds are either **delayed** for a set period or **redirected** to an accountability partner chosen by the user.  
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This mechanism combines **incentives** and **consequences**, helping users stay consistent with their goals in ways traditional task managers and to-do apps cannot.  
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Why KAIROS?  
+Modern productivity tools often fail because they lack real stakes.  
 
-## Learn More
+KAIROS introduces **skin in the game**, ensuring goals are backed by tangible commitment. Whether you’re learning a new skill, managing a packed schedule, or simply building better habits, KAIROS helps you stay accountable.  
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Features  
+- **Task Wallets** – Personal smart wallets for locking funds against goals.  
+- **Accountability Partners** – Redirect uncompleted task funds to a trusted person.  
+- **Automated Penalties & Rewards** – Programmable consequences for missed tasks.  
+- **Gasless Onboarding** – Built on a cost-efficient blockchain with Account Abstraction for smooth UX.  
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+KAIROS is more than a task manager — it’s a **system of accountability** designed for individuals and teams who want to turn intentions into consistent action.  
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack  
+- **Contracts:** Solidity, Foundry, ERC-4337, EntryPoint  
+- **Frontend:** Next.js, React, Tailwind, shadcn/ui  
+- **Backend:** Django (faucet service)  
+- **Infrastructure:** Base Sepolia, Pimlico, Privy  
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Current Status  
+✅ **Working Now**  
+- Task staking  
+- Penalty logic  
+- Wallet deployment  
+
+🛠️ **Planned**  
+- Full AA gasless flow  
+- UX polish  
+
+---
+
+
+
+---
+
+## Contracts (to add)  
+custom account factory: https://sepolia.basescan.org/address/0x5D16F29E70e90ac48C7F4fb2c1145911a774eFbF
+task-manager: https://sepolia.basescan.org/address/0x43e0bc90661daf20c6ffbae1079d6e07e88e403a
+
+---
+
+## Roadmap  
+- Full Account Abstraction integration with gasless sponsorship  
+- UX/UI polish and mobile optimization  
+
+
+---
+
+## License  
+MIT  
+
+---
+
+⚡ **KAIROS introduces real accountability by putting your money where your goals are.**  
